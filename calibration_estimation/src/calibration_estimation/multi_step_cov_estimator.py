@@ -336,6 +336,10 @@ if __name__ == '__main__':
                 print "Executing step without covariance calculations"
             output_dict, output_poses, J = opt_runner(robot_params, previous_pose_guesses, free_dict, multisensors, use_cov)
 
+        # Create output_dir if it doesn't exist
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
         # Dump results to file
         out_f = open(output_dir + "/" + cur_step["output_filename"] + ".yaml", 'w')
         yaml.dump(output_dict, out_f)
