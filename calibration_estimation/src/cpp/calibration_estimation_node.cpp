@@ -41,6 +41,7 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <sensor_msgs/JointState.h>
+#include <kdl_parser/kdl_parser.hpp>
 
 using namespace std;
 
@@ -48,6 +49,22 @@ void createLookUpTableCallback(const sensor_msgs::JointState::ConstPtr &joint_st
 {
   // test
   ROS_INFO("I heard: [%.5f]", joint_states->position.at(0));
+}
+
+bool read_robot_description()
+{
+  KDL::Tree my_tree;
+  ros::NodeHandle node;
+  std::string robot_desc_string;
+  node.param("robot_description", robot_desc_string, string());
+
+  if (!kdl_parser::treeFromString(robot_desc_string, my_tree))
+  {
+    ROS_ERROR("Failed to construct kdl tree");
+    return false;
+  }
+
+  return true;
 }
 
 int main(int argc, char **argv)

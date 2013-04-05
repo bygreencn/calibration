@@ -4,7 +4,7 @@ project(calibration_estimation)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs kdl_parser)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -51,9 +51,19 @@ catkin_package(
 ## Build ##
 ###########
 
+# Find KDL using pkg-config
+# ToDo: check why rosdepend doesn't work for this, link errors
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(KDL orocos-kdl)
+
 ## Specify additional locations of header files
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+  ${KDL_INCLUDE_DIRS}
+)
+
+link_directories(
+  ${KDL_LIBRARY_DIRS}
 )
 
 ## Declare a cpp library
