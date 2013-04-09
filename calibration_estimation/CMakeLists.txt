@@ -72,7 +72,11 @@ link_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(calibration_estimation_node src/cpp/calibration_estimation_node.cpp)
+add_executable(calibration_estimation_node
+                 src/cpp/calibration_estimation_node.cpp
+                 src/cpp/auxiliar.cpp
+                 src/cpp/joint_state.cpp
+)
 
 ## Add dependencies to the executable
 add_dependencies(calibration_estimation_node ${PROJECT_NAME})

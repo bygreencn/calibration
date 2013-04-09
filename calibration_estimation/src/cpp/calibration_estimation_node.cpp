@@ -43,37 +43,117 @@
 #include <sensor_msgs/JointState.h>
 #include <kdl_parser/kdl_parser.hpp>
 
-using namespace std;
+#include "auxiliar.h"
+#include "joint_state.h"
+#include "calibration_msgs/RobotMeasurement.h"
 
-void createLookUpTableCallback(const sensor_msgs::JointState::ConstPtr &joint_states)
+using namespace std;
+using namespace calib;
+
+// global variables
+JointState joint_state;
+ros::Publisher joint_pub;
+
+// Print vector<T>: cout << vector<T>
+template<typename T>
+std::ostream &operator <<(std::ostream &os, const std::vector<T> &v)
 {
-  // test
-  ROS_INFO("I heard: [%.5f]", joint_states->position.at(0));
+  std::copy(v.begin(), v.end(), std::ostream_iterator<T>(os, " "));
+  return os;
+}
+
+bool initJoinStateFromParam(JointState *joint_state)
+{
+  vector<string> names;
+  if (!getJoinNamesFromParam("robot_description", &names))
+    return false;
+
+  joint_state->initString(names);
+
+  return true;
 }
 
 bool read_robot_description()
 {
-  KDL::Tree my_tree;
+  KDL::Tree robot_kdl_tree;
   ros::NodeHandle node;
   std::string robot_desc_string;
   node.param("robot_description", robot_desc_string, string());
 
-  if (!kdl_parser::treeFromString(robot_desc_string, my_tree))
+  if (!kdl_parser::treeFromString(robot_desc_string, robot_kdl_tree))
   {
     ROS_ERROR("Failed to construct kdl tree");
     return false;
   }
 
+  // Get segments
+  KDL::SegmentMap robot_segments = robot_kdl_tree.getSegments();
+
+  // Print names
+  KDL::SegmentMap::const_iterator it = robot_segments.begin();
+
+  for (unsigned i = 0; it != robot_segments.end(); it++, i++)
+  {
+    cout << it->first << endl;
+  }
+
   return true;
+}
+
+void publish_joints(const JointState &joint_state)
+{
+  // message declaration
+  sensor_msgs::JointState joint_state_msg;
+  
+  // set stamp
+  joint_state_msg.header.stamp = ros::Time::now();
+
+  // set joint names
+  joint_state_msg.name = joint_state.getJointNames();
+
+  // set positions
+  joint_state_msg.position = joint_state.getJointPositions();
+
+  // Publish Joint state
+//   ROS_INFO("[visualization_node] publish_joins");  // TODO: ROS_INFO doesn't work
+  cout << "[visualization_node] publish_joins\n";
+
+  cout << joint_state_msg.position << endl;
+  joint_pub.publish(joint_state_msg);
+}
+
+void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
+{
+  // reset joints to zeros
+  joint_state.reset();
+
+  // update joints
+  unsigned size = robot_measurement->M_chain.size();
+  for (unsigned i = 0; i < size; i++)
+  {
+    joint_state.update(robot_measurement->M_chain.at(i).chain_state.name,
+                       robot_measurement->M_chain.at(i).chain_state.position);
+  }
+
+  // publish joints
+  publish_joints(joint_state);
 }
 
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "listener");
 
-  ros::NodeHandle n;
+  if (!initJoinStateFromParam(&joint_state))
+  {
+    return 0;
+  }
 
-  ros::Subscriber sub = n.subscribe("joint_states", 1, createLookUpTableCallback);
+  ros::NodeHandle n;
+  ros::Subscriber subs_robot_measurement;
+//   ros::Subscriber sub = n.subscribe("joint_states", 1, createLookUpTableCallback);
+//   read_robot_description();
+  joint_pub = n.advertise<sensor_msgs::JointState>("joint_states", 1);
+  subs_robot_measurement = n.subscribe("robot_measurement", 1, robotMeasurementCallback);
 
   ros::spin();
 
