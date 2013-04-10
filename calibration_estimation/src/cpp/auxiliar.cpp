@@ -38,8 +38,10 @@
 
 #include <ros/ros.h>
 #include <urdf/model.h>
+#include <sensor_msgs/JointState.h>
 
 using namespace std;
+using namespace ros;
 
 namespace calib
 {
@@ -67,6 +69,27 @@ bool getJoinNamesFromParam(const std::string &param,
   }
 
   return true;
+}
+
+void publishJoints(const Publisher &joint_pub,
+                   const JointState &joint_state)
+{
+  // message declaration
+  sensor_msgs::JointState joint_state_msg;
+
+  // set stamp
+  joint_state_msg.header.stamp = Time::now();
+
+  // set joint names
+  joint_state.getJointNames(&joint_state_msg.name);
+
+  // set positions
+  joint_state.getJointPositions(&joint_state_msg.position);
+
+  // Publish Joint state
+//   ROS_INFO("[visualization_node] publish_joins"); // TODO: doesn't work
+  cout << "[visualization_node] publish_joins\n";
+  joint_pub.publish(joint_state_msg);
 }
 
 }

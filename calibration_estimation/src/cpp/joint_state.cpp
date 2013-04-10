@@ -50,41 +50,35 @@ JointState::~JointState()
 
 void JointState::initString(const std::vector<std::string> &joint_name)
 {
-  // get size
-  unsigned size = joint_name.size();
-
-  // set joint names
-  name_ = joint_name;
-
-  // resize and set zeros the values
-  position_.resize(size, 0);
-
-  // create loopup table: map_
-  for (unsigned i = 0; i < size; ++i)
+  // create joint_positions_ map
+  for (unsigned i = 0; i < joint_name.size(); ++i)
   {
-    map_[name_[i]] = i;
+    joint_positions_[joint_name[i]] = 0;
   }
 }
 
-bool JointState::isEmpty(void)
+bool JointState::empty(void)
 {
-  ROS_ASSERT(name_.size() == position_.size());
-  return name_.empty();
+  return joint_positions_.empty();
 }
 
 bool JointState::reset(void)
 {
-  if (!isEmpty())
+  if (!empty())
   {
-    // get size
-    unsigned size = name_.size();
-
-    // resize and set zeros the values
-    for (unsigned i = 0; i < size; i++)
+    // reset joints to zeros
+    for(JointStateType::iterator it = joint_positions_.begin();
+      it != joint_positions_.end(); it++)
     {
-      position_[i] = 0;
+      it->second = 0;
     }
   }
+}
+
+bool JointState::update(const std::string &joint_name,
+                        const double      &position)
+{
+  joint_positions_[joint_name] = position;
 }
 
 bool JointState::update(const std::vector<std::string> &joint_name,
@@ -97,11 +91,32 @@ bool JointState::update(const std::vector<std::string> &joint_name,
   // update position values for the given joint names
   for (unsigned i = 0; i < size; i++)
   {
-    unsigned idx   = map_[joint_name[i]];
-    position_[idx] = position[i];
+    joint_positions_[joint_name[i]] = position[i];
 
-    std::cout << std::setw(25) << std::left << name_[i];
+    std::cout << std::setw(25) << std::left << joint_name[i];
     std::cout << " ==> pos=" << position[i] << std::endl;
+  }
+}
+
+void JointState::getJointNames(std::vector<std::string> *joint_name) const
+{
+  // get joint names
+  joint_name->clear();
+  for (JointStateType::const_iterator it = joint_positions_.begin();
+       it != joint_positions_.end(); it++)
+  {
+    joint_name->push_back(it->first);
+  }
+}
+
+void JointState::getJointPositions(std::vector<double> *joint_position) const
+{
+  // get joint position
+  joint_position->clear();
+  for (JointStateType::const_iterator it = joint_positions_.begin();
+       it != joint_positions_.end(); it++)
+  {
+    joint_position->push_back(it->second);
   }
 }
 

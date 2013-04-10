@@ -40,8 +40,8 @@
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
-#include <sensor_msgs/JointState.h>
 #include <kdl_parser/kdl_parser.hpp>
+#include <robot_state_publisher/robot_state_publisher.h>
 
 #include "auxiliar.h"
 #include "joint_state.h"
@@ -53,6 +53,8 @@ using namespace calib;
 // global variables
 JointState joint_state;
 ros::Publisher joint_pub;
+robot_state_publisher::RobotStatePublisher *robot_st_publisher;
+map<string, double> joint_positions;
 
 // Print vector<T>: cout << vector<T>
 template<typename T>
@@ -73,53 +75,31 @@ bool initJoinStateFromParam(JointState *joint_state)
   return true;
 }
 
-bool read_robot_description()
+bool readRobotDescription(const string &param,
+                          KDL::Tree *kdl_tree)
 {
-  KDL::Tree robot_kdl_tree;
   ros::NodeHandle node;
   std::string robot_desc_string;
-  node.param("robot_description", robot_desc_string, string());
+  node.param(param, robot_desc_string, string());
 
-  if (!kdl_parser::treeFromString(robot_desc_string, robot_kdl_tree))
+  if (!kdl_parser::treeFromString(robot_desc_string, *kdl_tree))
   {
     ROS_ERROR("Failed to construct kdl tree");
     return false;
   }
 
-  // Get segments
-  KDL::SegmentMap robot_segments = robot_kdl_tree.getSegments();
-
-  // Print names
-  KDL::SegmentMap::const_iterator it = robot_segments.begin();
-
-  for (unsigned i = 0; it != robot_segments.end(); it++, i++)
-  {
-    cout << it->first << endl;
-  }
+//   // Get segments
+//   KDL::SegmentMap robot_segments = robot_kdl_tree.getSegments();
+//
+//   // Print names
+//   KDL::SegmentMap::const_iterator it = robot_segments.begin();
+//
+//   for (unsigned i = 0; it != robot_segments.end(); it++, i++)
+//   {
+//     cout << it->first << endl;
+//   }
 
   return true;
-}
-
-void publish_joints(const JointState &joint_state)
-{
-  // message declaration
-  sensor_msgs::JointState joint_state_msg;
-  
-  // set stamp
-  joint_state_msg.header.stamp = ros::Time::now();
-
-  // set joint names
-  joint_state_msg.name = joint_state.getJointNames();
-
-  // set positions
-  joint_state_msg.position = joint_state.getJointPositions();
-
-  // Publish Joint state
-//   ROS_INFO("[visualization_node] publish_joins");  // TODO: ROS_INFO doesn't work
-  cout << "[visualization_node] publish_joins\n";
-
-  cout << joint_state_msg.position << endl;
-  joint_pub.publish(joint_state_msg);
 }
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
@@ -135,8 +115,12 @@ void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr
                        robot_measurement->M_chain.at(i).chain_state.position);
   }
 
+  // publish moving joints
+  robot_st_publisher->publishTransforms(joint_state.getJointPositions(),
+                                        ros::Time::now());
+
   // publish joints
-  publish_joints(joint_state);
+//   publishJoints(joint_pub, joint_state);
 }
 
 int main(int argc, char **argv)
@@ -148,15 +132,24 @@ int main(int argc, char **argv)
     return 0;
   }
 
+  // read robot description and create robot_state_publisher
+  KDL::Tree kdl_tree;
+  readRobotDescription("robot_description", &kdl_tree);
+  if (!robot_st_publisher)
+    robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
+
+  // create node
   ros::NodeHandle n;
-  ros::Subscriber subs_robot_measurement;
-//   ros::Subscriber sub = n.subscribe("joint_states", 1, createLookUpTableCallback);
-//   read_robot_description();
+
+  // subscriber
+  ros::Subscriber subs_robot_measurement = n.subscribe("robot_measurement", 1,
+                                                       robotMeasurementCallback);
+  // publisher
   joint_pub = n.advertise<sensor_msgs::JointState>("joint_states", 1);
-  subs_robot_measurement = n.subscribe("robot_measurement", 1, robotMeasurementCallback);
 
   ros::spin();
 
+  delete robot_st_publisher;
   return 0;
 }
 

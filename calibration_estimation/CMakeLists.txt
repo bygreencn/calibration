@@ -83,7 +83,7 @@ add_dependencies(calibration_estimation_node ${PROJECT_NAME})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(calibration_estimation_node
-  ${catkin_LIBRARIES} ${KDL_LIBRARIES}
+  ${catkin_LIBRARIES} ${KDL_LIBRARIES} robot_state_publisher_solver
 )
 
 #############

@@ -37,8 +37,8 @@
 #ifndef AUXILIAR_H
 #define AUXILIAR_H
 
-#include <vector>
-#include <string>
+#include <ros/ros.h>
+#include "joint_state.h"
 
 namespace calib
 {
@@ -47,7 +47,12 @@ namespace calib
 bool getJoinNamesFromParam(const std::string &param,
                            std::vector<std::string> *joint_name);
 
+/// TODO
+void publishJoints(const ros::Publisher &joint_pub,
+                   const calib::JointState &joint_state);
+
 }
+
 
 #endif // AUXILIAR_H
 

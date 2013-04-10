@@ -48,6 +48,8 @@ namespace calib
 class JointState
 {
 public:
+  typedef std::map<std::string, double> JointStateType;
+
   JointState();
   ~JointState();
 
@@ -55,23 +57,29 @@ public:
   void initString(const std::vector<std::string> &joint_name);
 
   /// \brief Check if it is empty (valid)
-  bool isEmpty();
+  bool empty();
 
   /// \brief Reset postion vector to zeros
   bool reset();
 
-  /// \brief Updates joint postions (it can be incomplete)
+  /// \brief Update one joint postions
+  bool update(const std::string &joint_name,
+              const double      &position);
+
+  /// \brief Update joint postions (it can be an incomplete subset)
   bool update(const std::vector<std::string> &joint_name,
               const std::vector<double>      &position);
 
-  // Getter functions
-  std::vector<std::string> getJointNames()     const { return name_; }
-  std::vector<double>      getJointPositions() const { return position_; }
+  /// \brief get Joint Names vector
+  void getJointNames(std::vector<std::string> *joint_name) const;
+
+  /// \brief get Joint Positions vector
+  void getJointPositions(std::vector<double> *joint_position) const;
+
+  const JointStateType &getJointPositions() const { return joint_positions_; }
 
 private:
-  std::vector<std::string>        name_;
-  std::vector<double>             position_;
-  std::map<std::string, unsigned> map_;      //! lookup table: "name" -> idx
+  JointStateType joint_positions_;
 };
 
 }
