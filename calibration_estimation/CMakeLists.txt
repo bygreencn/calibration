@@ -72,17 +72,17 @@ link_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(calibration_estimation_node
-                 src/cpp/calibration_estimation_node.cpp
+add_executable(visualization
+                 src/cpp/visualization.cpp
                  src/cpp/auxiliar.cpp
                  src/cpp/joint_state.cpp
 )
 
 ## Add dependencies to the executable
-add_dependencies(calibration_estimation_node ${PROJECT_NAME})
+add_dependencies(visualization ${PROJECT_NAME})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(calibration_estimation_node
+target_link_libraries(visualization
   ${catkin_LIBRARIES} ${KDL_LIBRARIES} robot_state_publisher_solver
 )
 
@@ -100,7 +100,7 @@ install(PROGRAMS
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS calibration_estimation calibration_estimation_node
+# install(TARGETS calibration_estimation visualization
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
