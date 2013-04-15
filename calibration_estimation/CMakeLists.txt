@@ -4,7 +4,7 @@ project(calibration_estimation)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs kdl_parser)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs kdl_parser image_geometry)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -83,7 +83,9 @@ add_dependencies(visualization ${PROJECT_NAME})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(visualization
-  ${catkin_LIBRARIES} ${KDL_LIBRARIES} robot_state_publisher_solver
+  ${catkin_LIBRARIES}
+  ${KDL_LIBRARIES}
+  robot_state_publisher_solver
 )
 
 #############

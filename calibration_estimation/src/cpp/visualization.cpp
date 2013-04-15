@@ -42,6 +42,8 @@
 #include <std_msgs/String.h>
 #include <kdl_parser/kdl_parser.hpp>
 #include <robot_state_publisher/robot_state_publisher.h>
+#include <image_geometry/pinhole_camera_model.h>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include "auxiliar.h"
 #include "joint_state.h"
@@ -102,6 +104,60 @@ bool readRobotDescription(const string &param,
   return true;
 }
 
+void ros2cv(const geometry_msgs::Point &pt_ros, cv::Point3d *pt_cv)
+{
+  pt_cv->x = pt_ros.x;
+  pt_cv->y = pt_ros.y;
+  pt_cv->z = pt_ros.z;
+}
+
+void ros2cv(const vector<geometry_msgs::Point> &pt_ros, vector<cv::Point3d> *pt_cv)
+{
+  pt_cv->clear();
+  pt_cv->reserve(pt_ros.size());
+
+  vector<geometry_msgs::Point>::const_iterator it = pt_ros.begin();
+  for(; it < pt_ros.end(); ++it)
+  {
+    cv::Point3d current_pt;
+    ros2cv(*it,&current_pt);
+    pt_cv->push_back(current_pt);
+  }
+}
+
+void ros2cv(const vector<geometry_msgs::Point> &pt_ros, cv::Mat *pt_cv)
+{
+  vector<cv::Point3d> points;
+  ros2cv(pt_ros, &points);
+  cv::Mat tmp(points);
+  tmp.copyTo(*pt_cv);
+}
+
+
+void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
+                   const cv::Point3d &xyz,
+                   cv::Point2d *points2D)
+{
+  *points2D = cam_model.project3dToPixel(xyz);
+//   *points2D = cam_model.rectifyPoint(*points2D);
+}
+
+void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
+                   const vector<cv::Point3d> &xyz,
+                   vector<cv::Point2d> *points2D)
+{
+  size_t n = xyz.size();
+  points2D->clear();
+  points2D->reserve(n);
+
+  for(size_t i=0; i<n; i++)
+  {
+    cv::Point2d current_pt;
+    projectPoints(cam_model, xyz[i], &current_pt);
+    points2D->push_back(current_pt);
+  }
+}
+
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   // reset joints to zeros
@@ -125,7 +181,7 @@ void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "listener");
+  ros::init(argc, argv, "visualization");
 
   if (!initJoinStateFromParam(&joint_state))
   {
