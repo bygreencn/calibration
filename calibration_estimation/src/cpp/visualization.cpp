@@ -60,14 +60,6 @@ ros::Publisher joint_pub;
 robot_state_publisher::RobotStatePublisher *robot_st_publisher;
 map<string, double> joint_positions;
 
-// Print vector<T>: cout << vector<T>
-template<typename T>
-std::ostream &operator <<(std::ostream &os, const std::vector<T> &v)
-{
-  std::copy(v.begin(), v.end(), std::ostream_iterator<T>(os, " "));
-  return os;
-}
-
 bool initJoinStateFromParam(JointState *joint_state)
 {
   vector<string> names;
@@ -105,8 +97,6 @@ bool readRobotDescription(const string &param,
 
   return true;
 }
-
-
 
 // ToDo: read this information from the system.yaml
 void getCheckboardSize(const string &target_id, ChessBoard *cb)

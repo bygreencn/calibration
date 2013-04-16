@@ -47,13 +47,18 @@ namespace calib
 bool getJoinNamesFromParam(const std::string &param,
                            std::vector<std::string> *joint_name);
 
-/// TODO
+/// \brief Publish Joint states
 void publishJoints(const ros::Publisher &joint_pub,
                    const calib::JointState &joint_state);
 
+// Print vector<T>: cout << vector<T>
+template<typename T>
+std::ostream &operator <<(std::ostream &os, const std::vector<T> &v)
+{
+  std::copy(v.begin(), v.end(), std::ostream_iterator<T>(os, " "));
+  return os;
 }
 
+}
 
 #endif // AUXILIAR_H
-
-
