@@ -57,6 +57,7 @@ public:
   /// \that one of the chessboard corners is in the origin and the
   /// \board is in the plane Z=0.
   void generateCorners(std::vector<cv::Point3d> *corners);
+  void generateCorners(cv::Mat_<double> *corners);
 
   /// get functions
   int getWidth()      { return width_;}

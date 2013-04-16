@@ -59,6 +59,13 @@ void ChessBoard::generateCorners(std::vector<cv::Point3d> *corners)
                                        float(j*square_size_), 0 ) );
 }
 
+void ChessBoard::generateCorners(cv::Mat_<double> *corners)
+{
+  std::vector<cv::Point3d> pts;
+  generateCorners(&pts);
+  *corners = cv::Mat(pts);
+}
+
 bool ChessBoard::empty(void)
 {
   return width_ == 0 || height_ == 0 || square_size_ == 0;

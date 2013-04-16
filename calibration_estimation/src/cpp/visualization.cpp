@@ -126,12 +126,11 @@ void ros2cv(const vector<geometry_msgs::Point> &pt_ros, vector<cv::Point3d> *pt_
   }
 }
 
-void ros2cv(const vector<geometry_msgs::Point> &pt_ros, cv::Mat *pt_cv)
+void ros2cv(const vector<geometry_msgs::Point> &pt_ros, cv::Mat_<double> *pt_cv)
 {
   vector<cv::Point3d> points;
   ros2cv(pt_ros, &points);
-  cv::Mat tmp(points);
-  tmp.copyTo(*pt_cv);
+  *pt_cv = cv::Mat(points);
 }
 
 
@@ -162,7 +161,7 @@ void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
 // ToDo: read this information from the system.yaml
 void getCheckboardSize(const string &target_id, ChessBoard *cb)
 {
-  if (target_id == "'large_cb_7x6'")
+  if (target_id == "large_cb_7x6")
   {
     cb->setSize( 7, 6, 0.108 );
     return;
@@ -173,6 +172,52 @@ void getCheckboardSize(const string &target_id, ChessBoard *cb)
     cb->setSize( 4, 5, 0.0245 );
     return;
   }
+}
+
+void show_messuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
+{
+  // generate 3D chessboard corners (board_points)
+  ChessBoard cb;
+  getCheckboardSize(robot_measurement->target_id, &cb);
+  vector<cv::Point3d> board_points;
+  cb.generateCorners(&board_points);
+
+
+  unsigned size = robot_measurement->M_chain.size();
+  unsigned i = 0;
+//   for (unsigned i = 0; i < size; i++)
+  {
+    // get camera info
+    image_geometry::PinholeCameraModel cam_model;
+    cam_model.fromCameraInfo(robot_measurement->M_cam.at(i).cam_info);
+
+    // get measurement
+    const vector<geometry_msgs::Point> &pts_ros = robot_measurement->M_cam.at(i).image_points;
+
+    // convert ROS points to OpenCV
+    std::vector<cv::Point3d> pts;
+    ros2cv(pts_ros, &pts);
+
+    // remove last rows
+    vector<cv::Point2d> found_board_corners;
+    found_board_corners.resize(pts.size());
+    for(int i=0; i < pts.size(); i++)
+    {
+      found_board_corners[i].x = pts[i].x;
+      found_board_corners[i].y = pts[i].y;
+    }
+
+    // find chessboard pose using solvePnP
+    cv::Mat rvec, tvec;
+    cv::solvePnP(board_points, found_board_corners,
+                 cam_model.intrinsicMatrix(),
+                 cam_model.distortionCoeffs(),
+                 rvec, tvec, false, CV_ITERATIVE);
+
+    cout<<" rvec "<<endl<<" "<<rvec<<endl;
+    cout<<" tvec "<<endl<<" "<<tvec<<endl<<endl;
+  }
+
 }
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
@@ -191,6 +236,11 @@ void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr
   // publish moving joints
   robot_st_publisher->publishTransforms(joint_state.getJointPositions(),
                                         ros::Time::now());
+
+  // show messuaremets
+  show_messuaremets(robot_measurement);
+
+  // calculate expected values
 
   // publish joints
 //   publishJoints(joint_pub, joint_state);
