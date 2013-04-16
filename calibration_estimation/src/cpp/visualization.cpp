@@ -42,11 +42,11 @@
 #include <std_msgs/String.h>
 #include <kdl_parser/kdl_parser.hpp>
 #include <robot_state_publisher/robot_state_publisher.h>
-#include <image_geometry/pinhole_camera_model.h>
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include "auxiliar.h"
 #include "chessboard.h"
+#include "projection.h"
 #include "joint_state.h"
 #include "calibration_msgs/RobotMeasurement.h"
 
@@ -134,29 +134,7 @@ void ros2cv(const vector<geometry_msgs::Point> &pt_ros, cv::Mat_<double> *pt_cv)
 }
 
 
-void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
-                   const cv::Point3d &xyz,
-                   cv::Point2d *points2D)
-{
-  *points2D = cam_model.project3dToPixel(xyz);
-//   *points2D = cam_model.rectifyPoint(*points2D);
-}
 
-void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
-                   const vector<cv::Point3d> &xyz,
-                   vector<cv::Point2d> *points2D)
-{
-  size_t n = xyz.size();
-  points2D->clear();
-  points2D->reserve(n);
-
-  for(size_t i=0; i<n; i++)
-  {
-    cv::Point2d current_pt;
-    projectPoints(cam_model, xyz[i], &current_pt);
-    points2D->push_back(current_pt);
-  }
-}
 
 // ToDo: read this information from the system.yaml
 void getCheckboardSize(const string &target_id, ChessBoard *cb)
@@ -174,7 +152,7 @@ void getCheckboardSize(const string &target_id, ChessBoard *cb)
   }
 }
 
-void show_messuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
+void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   // generate 3D chessboard corners (board_points)
   ChessBoard cb;
@@ -214,8 +192,33 @@ void show_messuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot
                  cam_model.distortionCoeffs(),
                  rvec, tvec, false, CV_ITERATIVE);
 
-    cout<<" rvec "<<endl<<" "<<rvec<<endl;
-    cout<<" tvec "<<endl<<" "<<tvec<<endl<<endl;
+    // reprojection error
+//     vector<Point2d> x2d_proj;
+//     projectPoints(board_points, rvec, tvec, cam_model.intrinsicMatrix(),
+//                                             cam_model.distortionCoeffs(), x2d_proj);
+//     double err = norm(found_board_corners, x2d_proj, CV_L2);
+    double err = computeReprojectionErrors(board_points,
+                                           found_board_corners,
+                                           cam_model.intrinsicMatrix(),
+                                           cam_model.distortionCoeffs(),
+                                           rvec, tvec);
+
+
+    cv::Mat modif_points;
+    vector<cv::Point2d> x2d_proj;
+    project3dPoints( cv::Mat(board_points), rvec, tvec, &modif_points );
+    cout << "\tmodif_points = " << modif_points << endl;
+
+    projectPoints(cam_model, modif_points, &x2d_proj);
+    double err2 = norm(found_board_corners, x2d_proj, CV_L2);
+
+//     cout << "\t found_board_corners = " << found_board_corners << endl;
+//     cout << "\t x2d_proj ="  << x2d_proj << endl << endl;
+
+    cout << "\tReproj. err = "  << err << endl;
+    cout << "\tReproj. err2 = " << err2 << endl;
+    cout << "\trvec = " << rvec << endl;
+    cout << "\ttvec ="  << tvec << endl << endl;
   }
 
 }
@@ -238,7 +241,7 @@ void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr
                                         ros::Time::now());
 
   // show messuaremets
-  show_messuaremets(robot_measurement);
+  showMessuaremets(robot_measurement);
 
   // calculate expected values
 

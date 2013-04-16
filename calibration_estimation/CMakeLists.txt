@@ -76,6 +76,7 @@ add_executable(visualization
                  src/cpp/visualization.cpp
                  src/cpp/auxiliar.cpp
                  src/cpp/chessboard.cpp
+                 src/cpp/projection.cpp
                  src/cpp/joint_state.cpp
 )
 
