@@ -46,6 +46,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include "auxiliar.h"
+#include "chessboard.h"
 #include "joint_state.h"
 #include "calibration_msgs/RobotMeasurement.h"
 
@@ -155,6 +156,22 @@ void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
     cv::Point2d current_pt;
     projectPoints(cam_model, xyz[i], &current_pt);
     points2D->push_back(current_pt);
+  }
+}
+
+// ToDo: read this information from the system.yaml
+void getCheckboardSize(const string &target_id, ChessBoard *cb)
+{
+  if (target_id == "'large_cb_7x6'")
+  {
+    cb->setSize( 7, 6, 0.108 );
+    return;
+  }
+
+  if (target_id == "small_cb_4x5")
+  {
+    cb->setSize( 4, 5, 0.0245 );
+    return;
   }
 }
 
