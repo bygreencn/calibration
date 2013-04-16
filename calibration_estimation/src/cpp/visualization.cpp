@@ -46,8 +46,9 @@
 
 #include "auxiliar.h"
 #include "chessboard.h"
-#include "projection.h"
+#include "conversion.h"
 #include "joint_state.h"
+#include "projection.h"
 #include "calibration_msgs/RobotMeasurement.h"
 
 using namespace std;
@@ -105,35 +106,6 @@ bool readRobotDescription(const string &param,
   return true;
 }
 
-void ros2cv(const geometry_msgs::Point &pt_ros, cv::Point3d *pt_cv)
-{
-  pt_cv->x = pt_ros.x;
-  pt_cv->y = pt_ros.y;
-  pt_cv->z = pt_ros.z;
-}
-
-void ros2cv(const vector<geometry_msgs::Point> &pt_ros, vector<cv::Point3d> *pt_cv)
-{
-  pt_cv->clear();
-  pt_cv->reserve(pt_ros.size());
-
-  vector<geometry_msgs::Point>::const_iterator it = pt_ros.begin();
-  for(; it < pt_ros.end(); ++it)
-  {
-    cv::Point3d current_pt;
-    ros2cv(*it,&current_pt);
-    pt_cv->push_back(current_pt);
-  }
-}
-
-void ros2cv(const vector<geometry_msgs::Point> &pt_ros, cv::Mat_<double> *pt_cv)
-{
-  vector<cv::Point3d> points;
-  ros2cv(pt_ros, &points);
-  *pt_cv = cv::Mat(points);
-}
-
-
 
 
 // ToDo: read this information from the system.yaml
@@ -151,6 +123,15 @@ void getCheckboardSize(const string &target_id, ChessBoard *cb)
     return;
   }
 }
+
+// void print_mat(cv::Mat tmp)
+// {
+//   cout << "size: " << tmp.size() << endl;
+//   cout << tmp << endl;
+// }
+
+// using namespace cv;
+
 
 void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
