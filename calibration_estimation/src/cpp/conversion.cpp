@@ -35,6 +35,7 @@
 //! \author Pablo Speciale
 
 #include "conversion.h"
+#include <ros/assert.h>
 
 using namespace std;
 using namespace cv;
@@ -42,33 +43,56 @@ using namespace cv;
 namespace calib
 {
 
-void ros2cv(const geometry_msgs::Point &pt_ros, Point3d *pt_cv)
+void ros2cv(const geometry_msgs::Point &point_ros, Point3d *point_cv)
 {
-  pt_cv->x = pt_ros.x;
-  pt_cv->y = pt_ros.y;
-  pt_cv->z = pt_ros.z;
+  point_cv->x = point_ros.x;
+  point_cv->y = point_ros.y;
+  point_cv->z = point_ros.z;
 }
 
-void ros2cv(const vector<geometry_msgs::Point> &pt_ros, vector<Point3d> *pt_cv)
+void ros2cv(const vector<geometry_msgs::Point> &pts_ros, vector<Point3d> *pts_cv)
 {
-  pt_cv->clear();
-  pt_cv->reserve(pt_ros.size());
+  pts_cv->clear();
+  pts_cv->reserve(pts_ros.size());
 
-  vector<geometry_msgs::Point>::const_iterator it = pt_ros.begin();
-  for(; it < pt_ros.end(); ++it)
+  vector<geometry_msgs::Point>::const_iterator it = pts_ros.begin();
+  for(; it < pts_ros.end(); ++it)
   {
     Point3d current_pt;
     ros2cv(*it,&current_pt);
-    pt_cv->push_back(current_pt);
+    pts_cv->push_back(current_pt);
   }
 }
 
-void ros2cv(const vector<geometry_msgs::Point> &pt_ros, Mat_<double> *pt_cv)
+void ros2cv(const vector<geometry_msgs::Point> &pts_ros, Mat_<double> *pts_cv)
 {
   vector<Point3d> points;
-  ros2cv(pt_ros, &points);
-  *pt_cv = Mat(points);
-  transpose(*pt_cv, *pt_cv);
+  ros2cv(pts_ros, &points);
+  *pts_cv = Mat(points);
+  transpose(*pts_cv, *pts_cv);
+}
+
+void cv2ros(const Mat &pts_cv, vector<geometry_msgs::Point> *pts_ros)
+{
+  ROS_ASSERT(pts_cv.type()==CV_64FC3 && pts_cv.cols==1);
+
+  // Mat -> vector<Point3d>
+  vector<Point3d> v_point;
+  v_point.clear();
+  v_point = (vector<Point3d>) pts_cv;
+
+  // vector<Point3d> -> vector<geometry_msgs::Point>
+  pts_ros->clear();
+  pts_ros->reserve(v_point.size());
+  for( unsigned int i = 0; i < v_point.size(); i++ )
+  {
+    geometry_msgs::Point current;
+    current.x = v_point[i].x;
+    current.y = v_point[i].y;
+    current.z = v_point[i].z;
+
+    pts_ros->push_back(current);
+  }
 }
 
 }

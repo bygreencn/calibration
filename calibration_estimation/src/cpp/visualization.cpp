@@ -42,6 +42,7 @@
 #include <std_msgs/String.h>
 #include <kdl_parser/kdl_parser.hpp>
 #include <robot_state_publisher/robot_state_publisher.h>
+#include <visualization_msgs/Marker.h>
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include "auxiliar.h"
@@ -57,6 +58,7 @@ using namespace calib;
 // global variables
 JointState joint_state;
 ros::Publisher joint_pub;
+ros::Publisher vis_pub;
 robot_state_publisher::RobotStatePublisher *robot_st_publisher;
 map<string, double> joint_positions;
 
@@ -141,13 +143,47 @@ double findChessboardPose(cv::InputArray objectPoints,
   return err;
 }
 
+void setMarkersParam(const string &frame,
+                     visualization_msgs::Marker *marker,
+                     double scale =0.02,
+                     double r =0.0,
+                     double g =1.0,
+                     double b =1.0)
+{
+  marker->header.frame_id = frame;
+  marker->header.stamp = ros::Time();
+  marker->ns = "calib";
+  marker->id = 0;
+  marker->type = visualization_msgs::Marker::CUBE_LIST;
+//   marker->type = visualization_msgs::Marker::SPHERE_LIST;
+  marker->action = visualization_msgs::Marker::ADD;
+
+  marker->scale.x = scale;
+  marker->scale.y = scale;
+  marker->scale.z = scale;
+
+  marker->color.r = r;
+  marker->color.g = g;
+  marker->color.b = b;
+  marker->color.a = 1.0;
+}
+
+void points2markers(const cv::Mat board_measured_pts_3D,
+                    visualization_msgs::Marker *marker)
+{
+  cv2ros(board_measured_pts_3D, &(marker->points));
+}
+
+
+// using namespace cv;
+
 void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   // generate 3D chessboard corners (board_points)
   ChessBoard cb;
   getCheckboardSize(robot_measurement->target_id, &cb);
-  vector<cv::Point3d> board_points;
-  cb.generateCorners(&board_points);
+  vector<cv::Point3d> board_model_pts_3D;
+  cb.generateCorners(&board_model_pts_3D);
 
   unsigned size = robot_measurement->M_chain.size();
   unsigned i = 0;
@@ -165,36 +201,55 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     ros2cv(pts_ros, &pts);
 
     // remove last rows
-    vector<cv::Point2d> found_board_corners;
-    found_board_corners.resize(pts.size());
+    vector<cv::Point2d> measured_pts_2D;
+    measured_pts_2D.resize(pts.size());
     for(int i=0; i < pts.size(); i++)
     {
-      found_board_corners[i].x = pts[i].x;
-      found_board_corners[i].y = pts[i].y;
+      measured_pts_2D[i].x = pts[i].x;
+      measured_pts_2D[i].y = pts[i].y;
     }
 
     // find chessboard pose using solvePnP
     cv::Mat rvec, tvec;
-    vector<cv::Point2d> proj_points2D;
-    double err = findChessboardPose(board_points, found_board_corners,
+    vector<cv::Point2d> expected_pts_2D;
+    double err = findChessboardPose(board_model_pts_3D, measured_pts_2D,
                                     cam_model.intrinsicMatrix(),
                                     cam_model.distortionCoeffs(),
-                                    rvec, tvec, proj_points2D);
+                                    rvec, tvec, expected_pts_2D);
 
-    double err2 = cv::norm(found_board_corners, proj_points2D, CV_L2);
+    // board_measured_pts
+    cv::Mat board_measured_pts_3D;
+    project3dPoints(cv::Mat(board_model_pts_3D), rvec, tvec, &board_measured_pts_3D);
+//     cout << "\tboard_measured_pts = " << board_measured_pts_3D << endl;
+
+//     double err2 = cv::norm(found_board_corners, proj_points2D, CV_L2);
+
+// /// calculate expected checkboard, in order to compare 3D points
+//     double err2 = findChessboardPose(board_model_pts_3D, expected_pts_2D,
+//                                      cam_model.intrinsicMatrix(),
+//                                      cam_model.distortionCoeffs(),
+//                                      rvec, tvec);
+// 
+//     // board_expected_pts
+//     cv::Mat board_expected_pts;
+//     project3dPoints(cv::Mat(board_model_pts_3D), rvec, tvec, &board_expected_pts);
+//     cout << "\tboard_measured_pts = " << endl;
+//     print_mat(board_expected_pts);
+
+
+    // checkboard visualization
+    visualization_msgs::Marker marker;
+    setMarkersParam(cam_model.tfFrame(), &marker);
+    points2markers(board_measured_pts_3D, &marker);
+    vis_pub.publish(marker);
 
 
 //     // TODO: find another way to calculate the repojection error from 3D points
-//     cv::Mat modif_points;
-//     vector<cv::Point2d> x2d_proj;
-//     project3dPoints( cv::Mat(board_points), rvec, tvec, &modif_points );
-//     cout << "\tmodif_points = " << modif_points << endl;
-// 
 //     projectPoints(cam_model, modif_points, &x2d_proj);
 //     double err2 = norm(found_board_corners, x2d_proj, CV_L2);
 
     cout << "\tReproj. err = "  << err << endl;
-    cout << "\tReproj. err2 = " << err2 << endl;
+//     cout << "\tReproj. err2 = " << err2 << endl;
     cout << "\trvec = " << rvec << endl;
     cout << "\ttvec ="  << tvec << endl << endl;
   }
@@ -243,13 +298,16 @@ int main(int argc, char **argv)
     robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
 
   // create node
-  ros::NodeHandle n;
+  ros::NodeHandle n; //("calib");
 
   // subscriber
   ros::Subscriber subs_robot_measurement = n.subscribe("robot_measurement", 1,
                                                        robotMeasurementCallback);
   // publisher
   joint_pub = n.advertise<sensor_msgs::JointState>("joint_states", 1);
+
+  // visualization marker publisher
+  vis_pub = n.advertise<visualization_msgs::Marker>( "visualization_marker", 0 );
 
   ros::spin();
 

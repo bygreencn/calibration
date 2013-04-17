@@ -43,10 +43,13 @@
 namespace calib
 {
 
-/// \brief Conversion functions: convert ROS points to OpenCV
-void ros2cv(const geometry_msgs::Point &pt_ros, cv::Point3d *pt_cv);
-void ros2cv(const std::vector<geometry_msgs::Point> &pt_ros, std::vector<cv::Point3d> *pt_cv);
-void ros2cv(const std::vector<geometry_msgs::Point> &pt_ros, cv::Mat_<double> *pt_cv);
+/// \brief Conversion functions: convert ROS to OpenCV points
+void ros2cv(const geometry_msgs::Point &point_ros, cv::Point3d *point_cv);
+void ros2cv(const std::vector<geometry_msgs::Point> &pts_ros, std::vector<cv::Point3d> *pts_cv);
+void ros2cv(const std::vector<geometry_msgs::Point> &pts_ros, cv::Mat_<double> *pts_cv);
+
+/// \brief Conversion functions: convert OpenCV to ROS points
+void cv2ros(const cv::Mat &pt_cv, std::vector<geometry_msgs::Point> *pt_ros);
 
 }
 
