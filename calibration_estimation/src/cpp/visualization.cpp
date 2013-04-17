@@ -114,14 +114,31 @@ void getCheckboardSize(const string &target_id, ChessBoard *cb)
   }
 }
 
-// void print_mat(cv::Mat tmp)
-// {
-//   cout << "size: " << tmp.size() << endl;
-//   cout << tmp << endl;
-// }
+void print_mat(cv::Mat tmp)
+{
+  cout << "size: " << tmp.rows << "x" << tmp.cols << endl;
+  cout << tmp/*.t()*/ << endl;
+}
 
-// using namespace cv;
+// find chessboard pose using solvePnP
+// TODO: move to another place
+double findChessboardPose(cv::InputArray objectPoints,
+                          cv::InputArray imagePoints,
+                          cv::InputArray cameraMatrix,
+                          cv::InputArray distCoeffs,
+                          cv::OutputArray rvec,
+                          cv::OutputArray tvec)
+{
+  cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs,
+               rvec, tvec, false, CV_ITERATIVE);
 
+  // reprojection error
+  double err = computeReprojectionErrors(objectPoints, imagePoints,
+                                         cameraMatrix, distCoeffs,
+                                         rvec, tvec);
+
+  return err;
+}
 
 void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
@@ -130,7 +147,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   getCheckboardSize(robot_measurement->target_id, &cb);
   vector<cv::Point3d> board_points;
   cb.generateCorners(&board_points);
-
 
   unsigned size = robot_measurement->M_chain.size();
   unsigned i = 0;
@@ -158,23 +174,12 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     // find chessboard pose using solvePnP
     cv::Mat rvec, tvec;
-    cv::solvePnP(board_points, found_board_corners,
-                 cam_model.intrinsicMatrix(),
-                 cam_model.distortionCoeffs(),
-                 rvec, tvec, false, CV_ITERATIVE);
+    double err = findChessboardPose(board_points, found_board_corners,
+                                    cam_model.intrinsicMatrix(),
+                                    cam_model.distortionCoeffs(),
+                                    rvec, tvec);
 
-    // reprojection error
-//     vector<Point2d> x2d_proj;
-//     projectPoints(board_points, rvec, tvec, cam_model.intrinsicMatrix(),
-//                                             cam_model.distortionCoeffs(), x2d_proj);
-//     double err = norm(found_board_corners, x2d_proj, CV_L2);
-    double err = computeReprojectionErrors(board_points,
-                                           found_board_corners,
-                                           cam_model.intrinsicMatrix(),
-                                           cam_model.distortionCoeffs(),
-                                           rvec, tvec);
-
-
+    // TODO: find another way to calculate the repojection error from 3D points
     cv::Mat modif_points;
     vector<cv::Point2d> x2d_proj;
     project3dPoints( cv::Mat(board_points), rvec, tvec, &modif_points );
@@ -182,9 +187,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     projectPoints(cam_model, modif_points, &x2d_proj);
     double err2 = norm(found_board_corners, x2d_proj, CV_L2);
-
-//     cout << "\t found_board_corners = " << found_board_corners << endl;
-//     cout << "\t x2d_proj ="  << x2d_proj << endl << endl;
 
     cout << "\tReproj. err = "  << err << endl;
     cout << "\tReproj. err2 = " << err2 << endl;
