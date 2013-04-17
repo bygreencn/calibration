@@ -46,10 +46,10 @@ namespace calib
 {
 
 void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
-                   const cv::Point3d &xyz,
+                   const cv::Point3d &points3D,
                    cv::Point2d *points2D)
 {
-  *points2D = cam_model.project3dToPixel(xyz);
+  *points2D = cam_model.project3dToPixel(points3D);
 //   *points2D = cam_model.rectifyPoint(*points2D);
 }
 
@@ -68,24 +68,18 @@ void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
     points2D->push_back(current_pt);
   }
 }
-
-double computeReprojectionErrors(const vector<Point3d> &X3D,
-                                 const vector<Point2d> &x2d,
-                                 const Mat &cameraMatrix,
-                                 const Mat &distCoeffs,
-                                 const Mat &rvec,
-                                 const Mat &tvec)
+ 
+double computeReprojectionErrors(InputArray points3D,
+                                 InputArray points2D,
+                                 InputArray cameraMatrix,
+                                 InputArray distCoeffs,
+                                 InputArray rvec,
+                                 InputArray tvec)
 {
-  double err;
-  vector<Point2d> x2d_proj;
-
-  projectPoints(X3D, rvec, tvec, cameraMatrix, distCoeffs, x2d_proj);
-  err = cv::norm(x2d, x2d_proj, CV_L2);
-
-//   cout << "\t x2d = " << x2d << endl;
-//   cout << "\t x2d_proj ="  << x2d_proj << endl << endl;
-
-  return err;
+  Mat x = points2D.getMat();
+  Mat proj_points2D(x.rows, x.cols, x.type());
+  projectPoints(points3D, rvec, tvec, cameraMatrix, distCoeffs, proj_points2D);
+  return norm(points2D, proj_points2D, CV_L2);
 }
 
 void project3dPoints(const Mat &points,
@@ -93,14 +87,12 @@ void project3dPoints(const Mat &points,
                      const Mat &tvec,
                      Mat *modif_points )
 {
-  modif_points->create(1, points.cols, CV_32FC3);
-  Mat R(3, 3, CV_64FC1);
+  Mat R;
   Rodrigues(rvec, R);
-  Mat transformation(3, 4, CV_64F);
-  Mat r = transformation.colRange(0, 3);
-  R.copyTo(r);
-  Mat t = transformation.colRange(3, 4);
-  tvec.copyTo(t);
+
+  Mat transformation;
+  cv::hconcat(R, tvec, transformation);
+
   transform(points, *modif_points, transformation);
 }
 

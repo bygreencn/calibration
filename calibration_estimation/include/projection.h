@@ -46,21 +46,21 @@ namespace calib
 
 /// \brief Project a 3D point into a 2D point using the camera model (cam_model)
 void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
-                   const cv::Point3d &xyz,
+                   const cv::Point3d &points3D,
                    cv::Point2d *points2D);
 
 /// \brief Project 3D points into 2D points using the camera model (cam_model)
 void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
-                   const std::vector<cv::Point3d> &xyz,
+                   const std::vector<cv::Point3d> &points3D,
                    std::vector<cv::Point2d> *points2D);
 
 /// \brief Calculate reprojection error
-double computeReprojectionErrors(const std::vector<cv::Point3d> &X3D,
-                                 const std::vector<cv::Point2d> &x2d,
-                                 const cv::Mat &cameraMatrix,
-                                 const cv::Mat &distCoeffs,
-                                 const cv::Mat &rvec,
-                                 const cv::Mat &tvec);
+double computeReprojectionErrors(cv::InputArray points3D,
+                                 cv::InputArray points2D,
+                                 cv::InputArray cameraMatrix,
+                                 cv::InputArray distCoeffs,
+                                 cv::InputArray rvec,
+                                 cv::InputArray tvec);
 
 /// \brief Transform 3D points using rvec and tvec
 void project3dPoints(const cv::Mat &points,
