@@ -53,8 +53,8 @@ void ChessBoard::generateCorners(std::vector<cv::Point3d> *corners)
   corners->clear();
 
   // generate corners: (x,y,z)
-  for ( int i = 0; i < width_; i++ )
-    for ( int j = 0; j < height_; j++ )
+  for ( int j = 0; j < height_; j++ )
+    for ( int i = 0; i < width_; i++ )
       corners->push_back( cv::Point3d( float(i*square_size_),
                                        float(j*square_size_), 0 ) );
 }
