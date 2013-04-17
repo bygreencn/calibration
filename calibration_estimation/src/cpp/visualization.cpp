@@ -127,7 +127,8 @@ double findChessboardPose(cv::InputArray objectPoints,
                           cv::InputArray cameraMatrix,
                           cv::InputArray distCoeffs,
                           cv::OutputArray rvec,
-                          cv::OutputArray tvec)
+                          cv::OutputArray tvec,
+                          cv::OutputArray proj_points2D =cv::noArray())
 {
   cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs,
                rvec, tvec, false, CV_ITERATIVE);
@@ -135,7 +136,7 @@ double findChessboardPose(cv::InputArray objectPoints,
   // reprojection error
   double err = computeReprojectionErrors(objectPoints, imagePoints,
                                          cameraMatrix, distCoeffs,
-                                         rvec, tvec);
+                                         rvec, tvec, proj_points2D);
 
   return err;
 }
@@ -174,19 +175,23 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     // find chessboard pose using solvePnP
     cv::Mat rvec, tvec;
+    vector<cv::Point2d> proj_points2D;
     double err = findChessboardPose(board_points, found_board_corners,
                                     cam_model.intrinsicMatrix(),
                                     cam_model.distortionCoeffs(),
-                                    rvec, tvec);
+                                    rvec, tvec, proj_points2D);
 
-    // TODO: find another way to calculate the repojection error from 3D points
-    cv::Mat modif_points;
-    vector<cv::Point2d> x2d_proj;
-    project3dPoints( cv::Mat(board_points), rvec, tvec, &modif_points );
-    cout << "\tmodif_points = " << modif_points << endl;
+    double err2 = cv::norm(found_board_corners, proj_points2D, CV_L2);
 
-    projectPoints(cam_model, modif_points, &x2d_proj);
-    double err2 = norm(found_board_corners, x2d_proj, CV_L2);
+
+//     // TODO: find another way to calculate the repojection error from 3D points
+//     cv::Mat modif_points;
+//     vector<cv::Point2d> x2d_proj;
+//     project3dPoints( cv::Mat(board_points), rvec, tvec, &modif_points );
+//     cout << "\tmodif_points = " << modif_points << endl;
+// 
+//     projectPoints(cam_model, modif_points, &x2d_proj);
+//     double err2 = norm(found_board_corners, x2d_proj, CV_L2);
 
     cout << "\tReproj. err = "  << err << endl;
     cout << "\tReproj. err2 = " << err2 << endl;

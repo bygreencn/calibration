@@ -60,7 +60,8 @@ double computeReprojectionErrors(cv::InputArray points3D,
                                  cv::InputArray cameraMatrix,
                                  cv::InputArray distCoeffs,
                                  cv::InputArray rvec,
-                                 cv::InputArray tvec);
+                                 cv::InputArray tvec,
+                                 cv::OutputArray proj_points2D =cv::noArray());
 
 /// \brief Transform 3D points using rvec and tvec
 void project3dPoints(const cv::Mat &points,

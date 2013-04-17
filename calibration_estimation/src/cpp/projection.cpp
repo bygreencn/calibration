@@ -74,11 +74,24 @@ double computeReprojectionErrors(InputArray points3D,
                                  InputArray cameraMatrix,
                                  InputArray distCoeffs,
                                  InputArray rvec,
-                                 InputArray tvec)
+                                 InputArray tvec,
+                                 OutputArray _proj_points2D)
 {
+  // set proper type for the output
   Mat x = points2D.getMat();
-  Mat proj_points2D(x.rows, x.cols, x.type());
+  Mat proj_points2D = _proj_points2D.getMat();
+  proj_points2D.create(x.rows, x.cols, x.type());
+
+  // project points
   projectPoints(points3D, rvec, tvec, cameraMatrix, distCoeffs, proj_points2D);
+
+  // save output if it is needed (no default parameter)
+  if( _proj_points2D.needed() )
+  {
+    proj_points2D.copyTo(_proj_points2D);
+  }
+
+  // return error
   return norm(points2D, proj_points2D, CV_L2);
 }
 
