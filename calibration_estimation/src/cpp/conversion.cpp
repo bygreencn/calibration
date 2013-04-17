@@ -68,6 +68,7 @@ void ros2cv(const vector<geometry_msgs::Point> &pt_ros, Mat_<double> *pt_cv)
   vector<Point3d> points;
   ros2cv(pt_ros, &points);
   *pt_cv = Mat(points);
+  transpose(*pt_cv, *pt_cv);
 }
 
 }

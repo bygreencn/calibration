@@ -64,6 +64,7 @@ void ChessBoard::generateCorners(cv::Mat_<double> *corners)
   std::vector<cv::Point3d> pts;
   generateCorners(&pts);
   *corners = cv::Mat(pts);
+  transpose(*corners, *corners);
 }
 
 bool ChessBoard::empty(void)
