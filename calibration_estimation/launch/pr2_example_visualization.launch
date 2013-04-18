@@ -1,8 +1,8 @@
 <launch>
-<!--   <param name="robot_description" command="$(find xacro)/xacro.py '$(find pr2_description)/robots/pr2.urdf.xacro'" /> -->
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find pr2_description)/robots/pr2.urdf.xacro'" />
 <!--   <node pkg="rxbag" name="rxbag" type="rxbag" args="$(find calibration_estimation)/src/example/cal_measurements.bag"/> -->
-  <node pkg="rosbag" name="play" type="play" args="$(find calibration_estimation)/src/example/cal_measurements.bag  --rate 25"/>
+<!--   <node pkg="rosbag" name="play" type="play" args="$(find calibration_estimation)/src/example/cal_measurements.bag  - -rate 25"/> -->
   <node pkg="rviz" name="rviz" type="rviz" args="-d $(find calibration_estimation)/src/example/config.rviz" />
-  <node pkg="calibration_estimation" name="visualization" type="visualization" />
+<!--   <node pkg="calibration_estimation" name="visualization" type="visualization" /> -->
   <node pkg="robot_state_publisher" name="robot_state_publisher" type="state_publisher" />
 </launch>
