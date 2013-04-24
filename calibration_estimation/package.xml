@@ -24,5 +24,8 @@
   <run_depend>python-tk</run_depend>
   <run_depend>image_geometry</run_depend>
 
+  <build_depend>tf</build_depend>
+  <build_depend>tf_conversions</build_depend>
+
   <!--<depend package="urdf_python" />   for parsing URDF (currently a modified version is held internally) -->
 </package>
