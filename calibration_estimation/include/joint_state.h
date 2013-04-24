@@ -75,7 +75,6 @@ public:
 
   /// \brief get Joint Positions vector
   void getJointPositions(std::vector<double> *joint_position) const;
-
   const JointStateType &getJointPositions() const { return joint_positions_; }
 
 private:

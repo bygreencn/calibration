@@ -36,6 +36,7 @@
 
 #include "joint_state.h"
 #include "ros/assert.h"
+#include "ros/debug.h"
 
 namespace calib
 {
@@ -67,8 +68,8 @@ bool JointState::reset(void)
   if (!empty())
   {
     // reset joints to zeros
-    for(JointStateType::iterator it = joint_positions_.begin();
-      it != joint_positions_.end(); it++)
+    for (JointStateType::iterator it = joint_positions_.begin();
+         it != joint_positions_.end(); it++)
     {
       it->second = 0;
     }
@@ -78,7 +79,18 @@ bool JointState::reset(void)
 bool JointState::update(const std::string &joint_name,
                         const double      &position)
 {
-  joint_positions_[joint_name] = position;
+  JointStateType::iterator it = joint_positions_.find(joint_name);
+  if (it != joint_positions_.end())
+  {
+    it->second = position;
+    return true;
+  }
+  else
+  {
+    ROS_DEBUG("Join: %s does not belong to the joint positions vector.",
+              joint_name.c_str());
+    return false;
+  }
 }
 
 bool JointState::update(const std::vector<std::string> &joint_name,
@@ -91,10 +103,9 @@ bool JointState::update(const std::vector<std::string> &joint_name,
   // update position values for the given joint names
   for (unsigned i = 0; i < size; i++)
   {
-    joint_positions_[joint_name[i]] = position[i];
-
-    std::cout << std::setw(25) << std::left << joint_name[i];
-    std::cout << " ==> pos=" << position[i] << std::endl;
+    update(joint_name[i], position[i]);
+//     std::cout << std::setw(25) << std::left << joint_name[i];
+//     std::cout << " ==> pos=" << position[i] << std::endl;
   }
 }
 
