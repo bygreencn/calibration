@@ -5,7 +5,7 @@
 
   <!--  rosbag  -->
   <node pkg="rosbag" name="play" type="play"
-        args="$(find calibration_estimation)/example/cal_measurements.bag  --rate 35"/>
+        args="$(find calibration_estimation)/example/cal_measurements.bag  --rate 25"/>
 
   <!-- rxbag -->
   <!--   <node pkg="rxbag" name="rxbag" type="rxbag" args="$(find calibration_estimation)/example/cal_measurements.bag"/> -->
