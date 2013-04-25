@@ -62,16 +62,6 @@ include_directories(include
 # )
 
 ## Declare a cpp executable
-add_executable(visualization
-                 src/cpp/visualization.cpp
-                 src/cpp/auxiliar.cpp
-                 src/cpp/chessboard.cpp
-                 src/cpp/conversion.cpp
-                 src/cpp/joint_state.cpp
-                 src/cpp/projection.cpp
-)
-
-## Declare a cpp executable
 add_executable(estimation
                  src/cpp/estimation.cpp
                  src/cpp/auxiliar.cpp
@@ -83,14 +73,9 @@ add_executable(estimation
 )
 
 ## Add dependencies to the executable
-add_dependencies(visualization ${PROJECT_NAME})
 add_dependencies(estimation ${PROJECT_NAME})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(visualization
-  ${catkin_LIBRARIES}
-)
-
 target_link_libraries(estimation
   ${catkin_LIBRARIES}
 )

@@ -74,18 +74,7 @@ Scalar colors[NUM_COLORS] = {
 inline Scalar chooseRandomColor() { return colors[rand() % NUM_COLORS]; }
 inline Scalar chooseRandomColor(int i) { return colors[i % NUM_COLORS]; }
 
-bool initJoinStateFromParam(JointState *joint_state)
-{
-  vector<string> names;
-  if (!getJoinNamesFromParam("robot_description", &names))
-    return false;
-
-  joint_state->initString(names);
-
-  return true;
-}
-
-// ToDo: read this information from the system.yaml
+// TODO: read this information from the system.yaml
 void getCheckboardSize(const string &target_id, ChessBoard *cb)
 {
   if (target_id == "large_cb_7x6")
@@ -253,9 +242,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   vis_pub.publish(marker_array);
 }
 
-// void robotPubliser();
-void publishFixedTransforms(const ros::TimerEvent &e);
-
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   // reset joints to zeros
@@ -277,182 +263,6 @@ void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr
   showMessuaremets(robot_measurement);
 }
 
-class SegmentPair
-{
-public:
-  SegmentPair(const KDL::Segment &p_segment,
-              const std::string  &p_root,
-              const std::string  &p_tip) : segment(p_segment), // {} //,
-                                           root(p_root),
-                                           tip(p_tip) { }
-  KDL::Segment segment;
-  std::string root, tip;
-};
-
-#include <tf_conversions/tf_kdl.h>
-tf::TransformBroadcaster *tf_broadcaster_;
-
-std::map<std::string, SegmentPair> segments_, segments_fixed_;
-// std::map<std::string, KDL::Segment> segments_; //, segments_fixed_;
-ros::Timer timer_;
-ros::Duration publish_interval_;
-
-// void robotPubliser()
-// {
-//   printf("Publishing transforms for moving joints");
-//   std::vector<tf::StampedTransform> tf_transforms;
-//   tf::StampedTransform tf_transform;
-//   tf_transform.stamp_ = ros::Time::now();
-//
-//   // loop over all joints
-//   for (map<string, double>::const_iterator jnt=joint_positions.begin(); jnt != joint_positions.end(); jnt++){
-//     std::map<std::string, SegmentPair>::const_iterator seg = segments_.find(jnt->first);
-//     if (seg != segments_.end()){
-//       tf::transformKDLToTF(seg->second.segment.pose(jnt->second), tf_transform);
-//       cout << "tf_transform.getOrigin(): " << tf_transform.getOrigin() << endl;
-//       tf_transform.frame_id_ = seg->second.root;
-//       tf_transform.child_frame_id_ = seg->second.tip;
-//       tf_transforms.push_back(tf_transform);
-//     }
-//   }
-//   tf_broadcaster_->sendTransform(tf_transforms);
-// }
-
-void publishFixedTransforms(const ros::TimerEvent &e)
-{
-//   ROS_DEBUG("Publishing transforms for moving joints");
-  std::vector<tf::StampedTransform> tf_transforms;
-  tf::StampedTransform tf_transform;
-  tf_transform.stamp_ = ros::Time::now(); //+ros::Duration(0.5);  // future publish by 0.5 seconds
-
-  // loop over all joints
-  const JointState::JointStateType joint_positions = robot_state.getJointPositions();
-  for (map<string, double>::const_iterator jnt=joint_positions.begin(); jnt != joint_positions.end(); jnt++){
-    std::map<std::string, SegmentPair>::const_iterator seg = segments_.find(jnt->first);
-    if (seg != segments_.end()){
-      tf::transformKDLToTF(seg->second.segment.pose(jnt->second), tf_transform);
-      cout << "tf_transform.getOrigin(): " << tf_transform.getOrigin() << endl;
-      tf_transform.frame_id_ = seg->second.root;
-      tf_transform.child_frame_id_ = seg->second.tip;
-      tf_transforms.push_back(tf_transform);
-    }
-  }
-  tf_broadcaster_->sendTransform(tf_transforms);
-}
-
-
-// add children to correct maps
-// void addChildren(const KDL::SegmentMap::const_iterator segment)
-// {
-//   const std::string &root = segment->second.segment.getName();
-//
-//   const std::vector<KDL::SegmentMap::const_iterator> &children = segment->second.children;
-//   for (unsigned int i=0; i < children.size(); i++)
-//   {
-//     const KDL::Segment &child = children[i]->second.segment;
-// //     SegmentPair s( child ); //, root, child.getName() );
-// //     if (child.getJoint().getType() == KDL::Joint::None)
-// //     {
-// //       segments_fixed_.insert(make_pair(child.getJoint().getName(), s));
-// // //       printf("Adding fixed segment from %s to %s\n", root.c_str(), child.getName().c_str());
-// // //       printf("link (F): %s\t->\t", s.segment.getName().c_str());
-// // //       printf("joint: %s\n", s.segment.getJoint().getName().c_str());
-// //     }
-// //     else
-// //     {
-//       segments_[child.getJoint().getName()] = child;
-// //       printf("Adding moving segment from %s to %s\n", root.c_str(), child.getName().c_str());
-//       printf("link (M): %s\t->\t", child.getName().c_str());
-//       printf("joint: %s\n", child.getJoint().getName().c_str());
-// //     }
-// //     printf("link (M): %s\t->\t", child.getJoint().getName().c_str() );
-// //     printf("link (M): %s\n", child.getName().c_str() );
-//
-//     addChildren(children[i]);
-//   }
-// }
-
-// std::map<std::string, KDL::Segment> segments_; //, segments_fixed_;
-
-// add children to correct maps
-// void addChildren(const KDL::SegmentMap::const_iterator segment)
-// {
-//   const std::string &root = segment->second.segment.getName();
-//
-//   const std::vector<KDL::SegmentMap::const_iterator> &children = segment->second.children;
-//   for (unsigned int i=0; i < children.size(); i++)
-//   {
-//     const KDL::Segment &child = children[i]->second.segment;
-//     segments_[child.getJoint().getName()] = child;
-//
-//     printf("link (M): %s\t->\t", child.getName().c_str());
-//     printf("joint: %s\n", child.getJoint().getName().c_str());
-//
-//     addChildren(children[i]);
-//   }
-// }
-
-
-
-
-void addChildren(const KDL::SegmentMap::const_iterator segment)
-{
-  const std::string& root = segment->second.segment.getName();
-
-  const std::vector<KDL::SegmentMap::const_iterator>& children = segment->second.children;
-  for (unsigned int i=0; i<children.size(); i++){
-    const KDL::Segment& child = children[i]->second.segment;
-    SegmentPair s(children[i]->second.segment, root, child.getName());
-//     if (child.getJoint().getType() == KDL::Joint::None){
-//       segments_fixed_.insert(make_pair(child.getJoint().getName(), s));
-//       ROS_DEBUG("Adding fixed segment from %s to %s", root.c_str(), child.getName().c_str());
-//     }
-//     else{
-      segments_.insert(make_pair(child.getJoint().getName(), s));
-//       printf("Adding moving segment from %s to %s", root.c_str(), child.getName().c_str());
-//     }
-    addChildren(children[i]);
-  }
-}
-
-
-
-void getJoinNamesFromKDL(const KDL::Tree &tree)
-{
-  // walk the tree and add segments to segments_
-  addChildren(tree.getRootSegment());
-}
-
-
-// void readRobotDescriptionFromTopic(std_msgs::StringConstPtr robot_description, KDL::Tree *kdl_tree)
-// {
-//   /*KDL::Tree kdl_tree*/;
-//
-// //   string robot_description;
-//
-//   if (!kdl_parser::treeFromString(robot_description->data, *kdl_tree))
-//   {
-//     ROS_ERROR("Failed to construct kdl tree");
-// //     return false;
-//   }
-//
-//   // Get segments
-//   KDL::SegmentMap robot_segments = kdl_tree->getSegments();
-//
-//   // Print names
-//   KDL::SegmentMap::const_iterator it = robot_segments.begin();
-//
-//   for (unsigned i = 0; it != robot_segments.end(); it++, i++)
-//   {
-//     cout << it->first << endl;
-//   }
-//
-//   printf("NAMES!!!\n");
-//   getJoinNamesFromKDL(kdl_tree);
-//
-// //   return true;
-// }
-
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "estimation");
@@ -462,12 +272,15 @@ int main(int argc, char **argv)
   if (!model.initParam("robot_description"))
     return EXIT_FAILURE;
 
-  // read robot description and create robot_state_publisher
+  // create a KDL tree from Urdf Model
   KDL::Tree kdl_tree;
-  if (!readRobotDescription(model, &kdl_tree))
+  if (!kdl_parser::treeFromUrdfModel(model, kdl_tree))
+  {
+    ROS_ERROR("Failed to construct kdl tree from urdf");
     return EXIT_FAILURE;
+  }
 
-  // robot publisher
+  // robot state publisher
   if (!robot_st_publisher)
     robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
 
@@ -477,12 +290,12 @@ int main(int argc, char **argv)
   // create node
   ros::NodeHandle n; //("calib");
 
-  tf::TransformBroadcaster tf_broadcaster;
-  tf_broadcaster_ = &tf_broadcaster;
-
   // subscriber
 //   ros::Subscriber sub_robot_description = n.subscribe<std_msgs::String>("robot_description", 1,
 //                                           boost::bind(readRobotDescriptionFromTopic, _1, &kdl_tree ));
+// (function type):
+// void readRobotDescriptionFromTopic(std_msgs::StringConstPtr robot_description,
+//                                    KDL::Tree *kdl_tree) {...}
 
   // subscriber
   ros::Subscriber subs_robot_measurement = n.subscribe("robot_measurement", 1,
@@ -496,4 +309,3 @@ int main(int argc, char **argv)
 //   delete robot_st_publisher;
   return 0;
 }
-

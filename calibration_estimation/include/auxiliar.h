@@ -45,19 +45,6 @@
 namespace calib
 {
 
-/// \brief Read robot description from urdf
-bool readRobotDescription(const urdf::Model &model, KDL::Tree *kdl_tree);
-
-/// \brief Read robot description from param
-bool readRobotDescription(const std::string &param, KDL::Tree *kdl_tree);
-
-/// \brief Get joint names from ROS param (i.e. rosparam get /robot_description)
-bool getJoinNamesFromParam(const std::string &param,
-                           std::vector<std::string> *joint_name);
-
-/// \brief Publish Joint states
-void publishJoints(const ros::Publisher &joint_pub,
-                   const calib::JointState &joint_state);
 
 // Print vector<T>: cout << vector<T>
 template<typename T>
