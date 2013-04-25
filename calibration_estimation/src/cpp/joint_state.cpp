@@ -51,6 +51,8 @@ JointState::~JointState()
 
 void JointState::initString(const std::vector<std::string> &joint_name)
 {
+  joint_positions_.clear();
+
   // create joint_positions_ map
   for (unsigned i = 0; i < joint_name.size(); ++i)
   {

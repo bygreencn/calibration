@@ -51,6 +51,7 @@
 #include "conversion.h"
 #include "joint_state.h"
 #include "projection.h"
+#include "robot_state.h"
 #include "calibration_msgs/RobotMeasurement.h"
 
 using namespace std;
@@ -58,11 +59,9 @@ using namespace cv;
 using namespace calib;
 
 // global variables
-JointState joint_state;
-ros::Publisher joint_pub;
+RobotState robot_state;
 ros::Publisher vis_pub;
 robot_state_publisher::RobotStatePublisher *robot_st_publisher;
-map<string, double> joint_positions;
 
 #define NUM_COLORS 8
 Scalar colors[NUM_COLORS] = {
@@ -82,33 +81,6 @@ bool initJoinStateFromParam(JointState *joint_state)
     return false;
 
   joint_state->initString(names);
-
-  return true;
-}
-
-bool readRobotDescription(const string &param,
-                          KDL::Tree *kdl_tree)
-{
-  ros::NodeHandle node;
-  string robot_desc_string;
-  node.param(param, robot_desc_string, string());
-
-  if (!kdl_parser::treeFromString(robot_desc_string, *kdl_tree))
-  {
-    ROS_ERROR("Failed to construct kdl tree");
-    return false;
-  }
-
-//   // Get segments
-//   KDL::SegmentMap robot_segments = kdl_tree->getSegments();
-//
-//   // Print names
-//   KDL::SegmentMap::const_iterator it = robot_segments.begin();
-//
-//   for (unsigned i = 0; it != robot_segments.end(); it++, i++)
-//   {
-//     cout << it->first << endl;
-//   }
 
   return true;
 }
@@ -287,32 +259,22 @@ void publishFixedTransforms(const ros::TimerEvent &e);
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   // reset joints to zeros
-  joint_state.reset();
+  robot_state.reset();
 
   // update joints
   unsigned size = robot_measurement->M_chain.size();
   for (unsigned i = 0; i < size; i++)
   {
-    joint_state.update(robot_measurement->M_chain.at(i).chain_state.name,
+    robot_state.update(robot_measurement->M_chain.at(i).chain_state.name,
                        robot_measurement->M_chain.at(i).chain_state.position);
   }
 
-  joint_positions = joint_state.getJointPositions();
-
   // publish moving joints
-//   robotPubliser();
-  ros::TimerEvent e;
-  publishFixedTransforms(e);
-//   robot_st_publisher->publishTransforms(joint_state.getJointPositions(),
-//                                         ros::Time::now());
+  robot_st_publisher->publishTransforms(robot_state.getJointPositions(),
+                                        ros::Time::now());
 
   // show messuaremets
   showMessuaremets(robot_measurement);
-
-  // calculate expected values
-
-  // publish joints
-//   publishJoints(joint_pub, joint_state);
 }
 
 class SegmentPair
@@ -364,6 +326,7 @@ void publishFixedTransforms(const ros::TimerEvent &e)
   tf_transform.stamp_ = ros::Time::now(); //+ros::Duration(0.5);  // future publish by 0.5 seconds
 
   // loop over all joints
+  const JointState::JointStateType joint_positions = robot_state.getJointPositions();
   for (map<string, double>::const_iterator jnt=joint_positions.begin(); jnt != joint_positions.end(); jnt++){
     std::map<std::string, SegmentPair>::const_iterator seg = segments_.find(jnt->first);
     if (seg != segments_.end()){
@@ -490,32 +453,26 @@ void getJoinNamesFromKDL(const KDL::Tree &tree)
 // //   return true;
 // }
 
-
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "visualization");
+  ros::init(argc, argv, "estimation");
 
-  if (!initJoinStateFromParam(&joint_state))
-  {
-    return 0;
-  }
+  // read urdf model from ROS param
+  urdf::Model model;
+  if (!model.initParam("robot_description"))
+    return EXIT_FAILURE;
 
   // read robot description and create robot_state_publisher
   KDL::Tree kdl_tree;
-  readRobotDescription("robot_description", &kdl_tree);
+  if (!readRobotDescription(model, &kdl_tree))
+    return EXIT_FAILURE;
+
+  // robot publisher
   if (!robot_st_publisher)
     robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
 
-  getJoinNamesFromKDL(kdl_tree);
-  cout << "segments_.size(): " << segments_.size() << endl;
-//   cout << "segments_fixed_.size(): " << segments_fixed_.size() << endl;
-
-  vector<string> joint_names;
-  joint_state.getJointNames(&joint_names);
-  cout << "joint_names.size(): " << joint_names.size() << endl;
-//   cout << joint_names;
-//   return 0;
-
+  // robot init
+  robot_state.initFromTree(kdl_tree);
 
   // create node
   ros::NodeHandle n; //("calib");
@@ -527,23 +484,16 @@ int main(int argc, char **argv)
 //   ros::Subscriber sub_robot_description = n.subscribe<std_msgs::String>("robot_description", 1,
 //                                           boost::bind(readRobotDescriptionFromTopic, _1, &kdl_tree ));
 
-
-  // trigger to publish fixed joints
-  publish_interval_ = ros::Duration(1.0/max(50.0,1.0));
-  timer_ = n.createTimer(publish_interval_, &publishFixedTransforms);
-
   // subscriber
   ros::Subscriber subs_robot_measurement = n.subscribe("robot_measurement", 1,
                                                        robotMeasurementCallback);
-  // publisher
-  joint_pub = n.advertise<sensor_msgs::JointState>("joint_states", 1);
 
   // visualization marker publisher
   vis_pub = n.advertise<visualization_msgs::MarkerArray>( "visualization_marker_array", 0 );
 
   ros::spin();
 
-  delete robot_st_publisher;
+//   delete robot_st_publisher;
   return 0;
 }
 

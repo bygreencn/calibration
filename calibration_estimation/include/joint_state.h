@@ -77,7 +77,7 @@ public:
   void getJointPositions(std::vector<double> *joint_position) const;
   const JointStateType &getJointPositions() const { return joint_positions_; }
 
-private:
+protected:
   JointStateType joint_positions_;
 };
 

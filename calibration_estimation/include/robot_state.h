@@ -47,7 +47,7 @@
 namespace calib
 {
 
-class RobotState
+class RobotState : public JointState
 {
 public:
   typedef std::map<std::string, KDL::Segment> RobotStateType;
@@ -62,22 +62,19 @@ public:
   /// \brief Check if it is empty (valid)
   bool empty();
 
-  /// \brief Reset postion vector to zeros
-  bool reset();
-
   void getFK(std::vector<KDL::Frame> &frames);
 
 protected:
-  /// \brief Add children. It creates the 'segments_' map
-  void addChildren(const KDL::SegmentMap::const_iterator segment);
+  /// \brief It creates the 'segments_' map and a vector of jnt names
+  void addChildren(const KDL::SegmentMap::const_iterator segment,
+                   std::vector<std::string> *joint_names);
 
 private:
-  RobotStateType segments_;   // (map) link_name  -> KDL::Segment
-  MapType        map_;        // (map) joint_name -> link_name
-  JointState     joint_state; //       joint_name -> angles
+  RobotStateType segments_;    // (map) link_name  -> KDL::Segment
+  MapType        map_;         // (map) joint_name -> link_name
+//   JointState     joint_state_; //       joint_name -> angles
 };
 
 }
 
 #endif // ROBOT_STATE_H
-

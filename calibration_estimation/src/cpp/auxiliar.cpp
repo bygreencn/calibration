@@ -37,7 +37,6 @@
 #include "auxiliar.h"
 
 #include <ros/ros.h>
-#include <urdf/model.h>
 #include <sensor_msgs/JointState.h>
 
 using namespace std;
@@ -45,6 +44,32 @@ using namespace ros;
 
 namespace calib
 {
+
+bool readRobotDescription(const urdf::Model &model, KDL::Tree *kdl_tree)
+{
+  if (!kdl_parser::treeFromUrdfModel(model, *kdl_tree))
+  {
+    ROS_ERROR("Failed to construct kdl tree from");
+    return false;
+  }
+
+  return true;
+}
+
+bool readRobotDescription(const string &param, KDL::Tree *kdl_tree)
+{
+  ros::NodeHandle node;
+  string robot_desc_string;
+  node.param(param, robot_desc_string, string());
+
+  if (!kdl_parser::treeFromString(robot_desc_string, *kdl_tree))
+  {
+    ROS_ERROR("Failed to construct kdl tree");
+    return false;
+  }
+
+  return true;
+}
 
 bool getJoinNamesFromParam(const std::string &param,
                            std::vector<std::string> *joint_name)
@@ -58,6 +83,7 @@ bool getJoinNamesFromParam(const std::string &param,
   }
 
   // resize joint_name
+  cout << "model.joints_.size(): " << model.joints_.size() <<endl;
   joint_name->resize(model.joints_.size());
 
   // get joint names
@@ -66,6 +92,7 @@ bool getJoinNamesFromParam(const std::string &param,
   {
     ROS_INFO("%s\n", it->first.c_str());
     (*joint_name)[i] = it->first;
+//     it->second->child_link_name;
   }
 
   return true;

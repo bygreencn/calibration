@@ -52,15 +52,22 @@ RobotState::~RobotState()
 
 void RobotState::initFromTree(const KDL::Tree &tree)
 {
+  vector<string> joint_names;
+
   // walk the tree recursively and add segments to segments_
-  addChildren(tree.getRootSegment());
+  addChildren(tree.getRootSegment(), &joint_names);
+
+  // init joint state from
+  initString(joint_names);
+
+  ROS_DEBUG("joint_names.size(): %d", joint_names.size());
+  ROS_DEBUG("joint_positions_.size(): %d", (int) joint_positions_.size()); // Also included JointType==Nnoe
 }
 
 // add children to correct maps
-void RobotState::addChildren(const KDL::SegmentMap::const_iterator segment)
+void RobotState::addChildren(const KDL::SegmentMap::const_iterator segment,
+                             vector<string> *joint_names)
 {
-  const string &root = segment->second.segment.getName();
-
   const vector<KDL::SegmentMap::const_iterator> &children = segment->second.children;
   for (unsigned int i = 0; i < children.size(); i++)
   {
@@ -73,8 +80,11 @@ void RobotState::addChildren(const KDL::SegmentMap::const_iterator segment)
     // associate 'joint_name' with 'link_name'
     map_[child.getJoint().getName()] = child.getName();
 
+    // add this name to the joint_name vector
+    joint_names->push_back(child.getJoint().getName());
+
     // continue recursively
-    addChildren(children[i]);
+    addChildren(children[i], joint_names);
 
     ROS_DEBUG("link: %s\t->\t", child.getName().c_str());
     ROS_DEBUG("joint: %s\n", child.getJoint().getName().c_str());
@@ -84,22 +94,17 @@ void RobotState::addChildren(const KDL::SegmentMap::const_iterator segment)
 
 bool RobotState::empty(void)
 {
-  return segments_.empty();
+  return JointState::empty() || segments_.empty();
 }
-
-
 
 void RobotState::getFK(vector<KDL::Frame> &poses)
 {
-  // get current joint positions
-  JointState::JointStateType joint_positions = joint_state.getJointPositions();
-
   // loop over all joint positions
-  JointState::JointStateType::const_iterator jnt = joint_positions.begin();
-  for (; jnt != joint_positions.end(); jnt++)
+  JointState::JointStateType::const_iterator jnt = joint_positions_.begin();
+  for (; jnt != joint_positions_.end(); jnt++)
   {
     // get link name
-    string link_name = map_[jnt->first];
+    string &link_name = map_[jnt->first];
 
     // get pose
     RobotStateType::const_iterator seg = segments_.find(link_name);
@@ -109,4 +114,6 @@ void RobotState::getFK(vector<KDL::Frame> &poses)
       poses.push_back(pose);
     }
   }
+}
+
 }
