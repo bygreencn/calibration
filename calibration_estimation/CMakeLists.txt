@@ -4,7 +4,7 @@ project(calibration_estimation)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs tf tf_conversions kdl_parser image_geometry)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs tf tf_conversions kdl_parser image_geometry robot_state_publisher)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -44,26 +44,16 @@ catkin_package(
    INCLUDE_DIRS include
 #  LIBRARIES calibration_estimation
 #  CATKIN_DEPENDS roscpp std_msgs
-#  DEPENDS system_lib
+ DEPENDS roscpp std_msgs tf tf_conversions kdl_parser image_geometry robot_state_publisher
 )
 
 ###########
 ## Build ##
 ###########
 
-# Find KDL using pkg-config
-# ToDo: check why rosdepend doesn't work for this, link errors
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(KDL orocos-kdl)
-
 ## Specify additional locations of header files
 include_directories(include
   ${catkin_INCLUDE_DIRS}
-  ${KDL_INCLUDE_DIRS}
-)
-
-link_directories(
-  ${KDL_LIBRARY_DIRS}
 )
 
 ## Declare a cpp library
@@ -98,14 +88,12 @@ add_dependencies(estimation ${PROJECT_NAME})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(visualization
   ${catkin_LIBRARIES}
-  ${KDL_LIBRARIES}
-  robot_state_publisher_solver
 )
+
+message("->>>>>>>>>>>>>>>>>>>>>>>> " ${KDL_LIBRARIES})
 
 target_link_libraries(estimation
   ${catkin_LIBRARIES}
-  ${KDL_LIBRARIES}
-  robot_state_publisher_solver
 )
 
 #############
