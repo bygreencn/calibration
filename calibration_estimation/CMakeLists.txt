@@ -79,6 +79,7 @@ add_executable(estimation
                  src/cpp/conversion.cpp
                  src/cpp/joint_state.cpp
                  src/cpp/projection.cpp
+                 src/cpp/robot_state.cpp
 )
 
 ## Add dependencies to the executable
@@ -89,8 +90,6 @@ add_dependencies(estimation ${PROJECT_NAME})
 target_link_libraries(visualization
   ${catkin_LIBRARIES}
 )
-
-message("->>>>>>>>>>>>>>>>>>>>>>>> " ${KDL_LIBRARIES})
 
 target_link_libraries(estimation
   ${catkin_LIBRARIES}
