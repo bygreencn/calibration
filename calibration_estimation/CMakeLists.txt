@@ -62,8 +62,8 @@ include_directories(include
 # )
 
 ## Declare a cpp executable
-add_executable(estimation
-                 src/cpp/estimation.cpp
+add_executable(run_estimation
+                 src/cpp/main.cpp
                  src/cpp/auxiliar.cpp
                  src/cpp/chessboard.cpp
                  src/cpp/conversion.cpp
@@ -73,10 +73,10 @@ add_executable(estimation
 )
 
 ## Add dependencies to the executable
-add_dependencies(estimation ${PROJECT_NAME})
+add_dependencies(run_estimation ${PROJECT_NAME})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(estimation
+target_link_libraries(run_estimation
   ${catkin_LIBRARIES}
 )
 

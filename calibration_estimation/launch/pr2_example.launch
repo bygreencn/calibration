@@ -14,8 +14,8 @@
   <node pkg="rviz" name="rviz" type="rviz"
         args="-d $(find calibration_estimation)/example/config.rviz" />
 
-  <!-- visualization -->
-  <node pkg="calibration_estimation" name="visualization" type="visualization" />
+  <!-- run_estimation -->
+  <node pkg="calibration_estimation" name="run_estimation" type="run_estimation" />
 
   <!--   robot_state_publisher -->
   <node pkg="robot_state_publisher" name="robot_state_publisher" type="state_publisher" />

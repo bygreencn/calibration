@@ -117,7 +117,7 @@ double findChessboardPose(cv::InputArray objectPoints,
   return err;
 }
 
-void setMarkersParam(const int id,  // needed for MarkerArray
+void setMarkers(const int id,  // needed for MarkerArray
                      const string &ns,
                      const string &frame,
                      visualization_msgs::Marker *marker,
@@ -207,22 +207,23 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
 
     // checkboard visualization
+    // TODO: some frame are hard code here. Is it a possible error in the bag?
     visualization_msgs::Marker marker;
     if( robot_measurement->M_cam.at(i).camera_id == "narrow_right_rect" )
     {
-      setMarkersParam(i, robot_measurement->M_cam.at(i).camera_id,
+      setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
                     "narrow_stereo_r_stereo_camera_optical_frame", &marker,
                     colors[i]);
     }
     else if( robot_measurement->M_cam.at(i).camera_id == "wide_right_rect" )
     {
-      setMarkersParam(i, robot_measurement->M_cam.at(i).camera_id,
+      setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
                     "wide_stereo_r_stereo_camera_optical_frame", &marker,
                     colors[i]);
     }
     else
     {
-      setMarkersParam(i, robot_measurement->M_cam.at(i).camera_id,
+      setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
                       cam_model.tfFrame(), &marker,
                       chooseRandomColor(i));
     }
@@ -289,13 +290,6 @@ int main(int argc, char **argv)
 
   // create node
   ros::NodeHandle n; //("calib");
-
-  // subscriber
-//   ros::Subscriber sub_robot_description = n.subscribe<std_msgs::String>("robot_description", 1,
-//                                           boost::bind(readRobotDescriptionFromTopic, _1, &kdl_tree ));
-// (function type):
-// void readRobotDescriptionFromTopic(std_msgs::StringConstPtr robot_description,
-//                                    KDL::Tree *kdl_tree) {...}
 
   // subscriber
   ros::Subscriber subs_robot_measurement = n.subscribe("robot_measurement", 1,
