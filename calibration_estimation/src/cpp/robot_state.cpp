@@ -35,8 +35,8 @@
 //! \author Pablo Speciale
 
 #include "robot_state.h"
-#include <kdl_parser/kdl_parser.hpp>
 #include "ros/assert.h"
+#include <kdl_parser/kdl_parser.hpp>
 
 using namespace std;
 
@@ -65,27 +65,6 @@ void RobotState::initFromURDF(const urdf::Model &model)
 
   // init joint_state (vector of angles joints)
   JointState::initString(joint_names);
-}
-
-void RobotState::getRoot(const string &link_name, string *root) const
-{
-  root->clear();
-
-  const urdf::Link *link = urdf_model_.getLink(link_name).get();
-  if (!link)
-  {
-    ROS_ERROR("Link name could not been found");
-    return;
-  }
-
-  const urdf::Link *parent = link->getParent().get();
-  if (!parent)
-  {
-    ROS_ERROR("Parent link name could not been found");
-    return;
-  }
-
-  *root = parent->name;
 }
 
 void RobotState::getJointNames(vector<string> *joint_name) const
@@ -163,9 +142,9 @@ void RobotState::getPose(const string &link_name,
     ROS_ERROR("Link name could not been found");
 }
 
-void RobotState::getPoses(PosesType &poses)
+void RobotState::getPoses(PosesType *poses)
 {
-  poses.clear();
+  poses->clear();
 
   // loop over all joint positions
   JointState::JointStateType::const_iterator jnt = joint_positions_.begin();
@@ -177,11 +156,30 @@ void RobotState::getPoses(PosesType &poses)
     getPose( link_name, jnt->second, &pose );
 
     // save pose
-    poses[link_name] = pose;
+    (*poses)[link_name] = pose;
   }
 }
 
-string RobotState::getLinkName(const string &Join_name)
+string RobotState::getRoot(const string &link_name) const
+{
+  const urdf::Link *link = urdf_model_.getLink(link_name).get();
+  if (!link)
+  {
+    ROS_ERROR("Link name could not been found");
+    return string("");
+  }
+
+  const urdf::Link *parent = link->getParent().get();
+  if (!parent)
+  {
+    ROS_ERROR("Parent link name could not been found");
+    return string("");
+  }
+
+  return parent->name;
+}
+
+string RobotState::getLinkName(const string &Join_name) const
 {
   // get pose
   MapType::const_iterator it = map_.find(Join_name);
@@ -191,7 +189,7 @@ string RobotState::getLinkName(const string &Join_name)
     ROS_ERROR("Join name could not been found");
 }
 
-string RobotState::getJointName(const string &link_name)
+string RobotState::getJointName(const string &link_name) const
 {
   // get pose
   RobotStateType::const_iterator seg = segments_.find(link_name);

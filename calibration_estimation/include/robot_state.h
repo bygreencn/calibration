@@ -42,13 +42,12 @@
 
 #include <urdf/model.h>
 #include <map>
-#include <kdl/segment.hpp>
 #include <kdl/tree.hpp>
 
 namespace calib
 {
 
-class RobotState : JointState
+class RobotState : public JointState
 {
 public:
   typedef std::map<std::string, KDL::Segment> RobotStateType;
@@ -61,12 +60,8 @@ public:
   /// \brief Load from urdf Model
   void initFromURDF(const urdf::Model &model);
 
-  /// \brief Get root of the link
-  void getRoot(const std::string &link_name, std::string *root) const;
-
   /// \brief Get Joint Names vector
   void getJointNames(std::vector<std::string> *joint_name) const;
-
 
   /// \brief Check if it is empty (valid)
   bool empty();
@@ -77,13 +72,16 @@ public:
                KDL::Frame *pose);
 
   /// \brief get poses
-  void getPoses(PosesType &poses);
+  void getPoses(PosesType *poses);
+
+  /// \brief Get root of the link
+  std::string getRoot(const std::string &link_name) const;
 
   /// \brief get LinkName from JointName
-  std::string getLinkName(const std::string &Join_name);
+  std::string getLinkName(const std::string &Join_name) const;
 
   /// \brief get JointName from LinkName
-  std::string getJointName(const std::string &link_name);
+  std::string getJointName(const std::string &link_name) const;
 
 protected:
   /// \brief Clear internal data
@@ -95,7 +93,7 @@ protected:
   /// \brief It creates the 'segments_' map and a vector of jnt names
   void addChildren(const KDL::SegmentMap::const_iterator segment);
 
-private:
+protected:
   urdf::Model    urdf_model_;  // URDF model
 
   RobotStateType segments_;    // (map) link_name  -> KDL::Segment
