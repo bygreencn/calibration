@@ -52,15 +52,41 @@ RobotStatePublisher::RobotStatePublisher()
   node_.param("publish_frequency", publish_freq, 100.0);
 
   // trigger to publish fixed joints
-  publish_interval_ = ros::Duration(1.0/max(publish_freq,100.0));
-  timer_ = node_.createTimer(publish_interval_, &RobotStatePublisher::publishFixedTransforms, this);
+  publish_interval_ = ros::Duration(1.0/max(publish_freq,1.0));
+  timer_ = node_.createTimer(publish_interval_, &RobotStatePublisher::publishTransforms, this);
 }
 
 RobotStatePublisher::~RobotStatePublisher()
 {
 }
 
-void RobotStatePublisher::publishFixedTransforms(const ros::TimerEvent &e)
+bool RobotStatePublisher::update(const string &joint_name,
+                                 const double &position)
+{
+  // using JointState implementation
+  bool result = JointState::update(joint_name, position);
+
+  // publishing transforms right away
+  const ros::TimerEvent dummy_event;
+  publishTransforms(dummy_event);
+
+  return result;
+}
+
+bool RobotStatePublisher::update(const vector<string> &joint_name,
+                                 const vector<double> &position)
+{
+  // using JointState implementation
+  bool result = JointState::update(joint_name, position);
+
+  // publishing transforms right away
+  const ros::TimerEvent dummy_event;
+  publishTransforms(dummy_event);
+
+  return result;
+}
+
+void RobotStatePublisher::publishTransforms(const ros::TimerEvent &e)
 {
 //   ROS_DEBUG("Publishing transforms for moving joints");
 

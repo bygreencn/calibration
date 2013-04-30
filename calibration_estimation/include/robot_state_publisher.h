@@ -51,7 +51,13 @@ public:
   RobotStatePublisher();
   ~RobotStatePublisher();
 
-  void publishFixedTransforms(const ros::TimerEvent &e);
+  bool update(const std::string &joint_name,
+              const double      &position);
+
+  bool update(const std::vector<std::string> &joint_name,
+              const std::vector<double>      &position);
+
+  void publishTransforms(const ros::TimerEvent &e);
 
 private:
   ros::NodeHandle node_;
