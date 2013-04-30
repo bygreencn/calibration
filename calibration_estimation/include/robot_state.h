@@ -40,6 +40,7 @@
 
 #include "joint_state.h"
 
+#include <urdf/model.h>
 #include <map>
 #include <kdl/segment.hpp>
 #include <kdl/tree.hpp>
@@ -47,32 +48,58 @@
 namespace calib
 {
 
-class RobotState : public JointState
+class RobotState : JointState
 {
 public:
   typedef std::map<std::string, KDL::Segment> RobotStateType;
   typedef std::map<std::string, std::string>  MapType;
+  typedef std::map<std::string, KDL::Frame>   PosesType;
 
   RobotState();
   ~RobotState();
 
-  /// \brief Load from KDL tree
-  void initFromTree(const KDL::Tree &tree);
+  /// \brief Load from urdf Model
+  void initFromURDF(const urdf::Model &model);
+
+  /// \brief Get root of the link
+  void getRoot(const std::string &link_name, std::string *root) const;
+
+  /// \brief Get Joint Names vector
+  void getJointNames(std::vector<std::string> *joint_name) const;
+
 
   /// \brief Check if it is empty (valid)
   bool empty();
 
-  void getFK(std::vector<KDL::Frame> &frames);
+  /// \brief get pose
+  void getPose(const std::string &link_name,
+               const double angle,
+               KDL::Frame *pose);
+
+  /// \brief get poses
+  void getPoses(PosesType &poses);
+
+  /// \brief get LinkName from JointName
+  std::string getLinkName(const std::string &Join_name);
+
+  /// \brief get JointName from LinkName
+  std::string getJointName(const std::string &link_name);
 
 protected:
+  /// \brief Clear internal data
+  void clear();
+
+  /// \brief Load Segments vector from a KDL tree
+  void initSegments();
+
   /// \brief It creates the 'segments_' map and a vector of jnt names
-  void addChildren(const KDL::SegmentMap::const_iterator segment,
-                   std::vector<std::string> *joint_names);
+  void addChildren(const KDL::SegmentMap::const_iterator segment);
 
 private:
+  urdf::Model    urdf_model_;  // URDF model
+
   RobotStateType segments_;    // (map) link_name  -> KDL::Segment
   MapType        map_;         // (map) joint_name -> link_name
-//   JointState     joint_state_; //       joint_name -> angles
 };
 
 }

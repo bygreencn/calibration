@@ -35,6 +35,7 @@
 //! \author Pablo Speciale
 
 #include "robot_state.h"
+#include <kdl_parser/kdl_parser.hpp>
 #include "ros/assert.h"
 
 using namespace std;
@@ -50,70 +51,154 @@ RobotState::~RobotState()
 {
 }
 
-void RobotState::initFromTree(const KDL::Tree &tree)
+void RobotState::initFromURDF(const urdf::Model &model)
 {
+  // copy urdf model
+  urdf_model_ = model;
+
+  // create internal structures
+  initSegments();
+
+  // get joint names
   vector<string> joint_names;
+  getJointNames(&joint_names);
+
+  // init joint_state (vector of angles joints)
+  JointState::initString(joint_names);
+}
+
+void RobotState::getRoot(const string &link_name, string *root) const
+{
+  root->clear();
+
+  const urdf::Link *link = urdf_model_.getLink(link_name).get();
+  if (!link)
+  {
+    ROS_ERROR("Link name could not been found");
+    return;
+  }
+
+  const urdf::Link *parent = link->getParent().get();
+  if (!parent)
+  {
+    ROS_ERROR("Parent link name could not been found");
+    return;
+  }
+
+  *root = parent->name;
+}
+
+void RobotState::getJointNames(vector<string> *joint_name) const
+{
+  joint_name->clear();
+
+  // get joint names
+  map<string, boost::shared_ptr<urdf::Joint> >::const_iterator it = urdf_model_.joints_.begin();
+  for (; it != urdf_model_.joints_.end(); it++)
+  {
+    joint_name->push_back(it->first);
+  }
+}
+
+void RobotState::clear()
+{
+  segments_.clear();
+  map_.clear();
+}
+
+void RobotState::initSegments()
+{
+  // cleanning data
+  clear();
+
+  // convert URDF to KDL tree
+  KDL::Tree kdl_tree;
+  if (!kdl_parser::treeFromUrdfModel(urdf_model_, kdl_tree))
+  {
+    ROS_ERROR("Failed to construct kdl tree from urdf");
+  }
 
   // walk the tree recursively and add segments to segments_
-  addChildren(tree.getRootSegment(), &joint_names);
-
-  // init joint state from
-  initString(joint_names);
-
-  ROS_DEBUG("joint_names.size(): %d", joint_names.size());
-  ROS_DEBUG("joint_positions_.size(): %d", (int) joint_positions_.size()); // Also included JointType==Nnoe
+  addChildren(kdl_tree.getRootSegment());
 }
 
 // add children to correct maps
-void RobotState::addChildren(const KDL::SegmentMap::const_iterator segment,
-                             vector<string> *joint_names)
+void RobotState::addChildren(const KDL::SegmentMap::const_iterator segment)
 {
+  // getting children
   const vector<KDL::SegmentMap::const_iterator> &children = segment->second.children;
   for (unsigned int i = 0; i < children.size(); i++)
   {
     // find current child
-    const KDL::Segment &child = children[i]->second.segment;
+    KDL::Segment child = children[i]->second.segment;
 
-    // add it to segments_ (using its link name)
-    segments_[child.getName()] = child;
+    const string &link_name  = child.getName();
+    const string &joint_name = child.getJoint().getName();
 
-    // associate 'joint_name' with 'link_name'
-    map_[child.getJoint().getName()] = child.getName();
+    // add segment
+    segments_[link_name] = child;
 
-    // add this name to the joint_name vector
-    joint_names->push_back(child.getJoint().getName());
+    // update id tables
+    map_[joint_name] = link_name;
 
     // continue recursively
-    addChildren(children[i], joint_names);
-
-    ROS_DEBUG("link: %s\t->\t", child.getName().c_str());
-    ROS_DEBUG("joint: %s\n", child.getJoint().getName().c_str());
+    addChildren(children[i]);
   }
 }
 
-
 bool RobotState::empty(void)
 {
-  return JointState::empty() || segments_.empty();
+  return segments_.empty();
 }
 
-void RobotState::getFK(vector<KDL::Frame> &poses)
+void RobotState::getPose(const string &link_name,
+                                  const double angle,
+                                  KDL::Frame *pose)
 {
+  // get pose
+  RobotStateType::const_iterator seg = segments_.find(link_name);
+  if (seg != segments_.end())
+    *pose = seg->second.pose(angle);
+  else
+    ROS_ERROR("Link name could not been found");
+}
+
+void RobotState::getPoses(PosesType &poses)
+{
+  poses.clear();
+
   // loop over all joint positions
   JointState::JointStateType::const_iterator jnt = joint_positions_.begin();
   for (; jnt != joint_positions_.end(); jnt++)
   {
-    // get link name
-    string &link_name = map_[jnt->first];
-
     // get pose
-    RobotStateType::const_iterator seg = segments_.find(link_name);
-    if (seg != segments_.end())
-    {
-      KDL::Frame pose = seg->second.pose(jnt->second);
-      poses.push_back(pose);
-    }
+    KDL::Frame pose;
+    const string &link_name = getLinkName(jnt->first);
+    getPose( link_name, jnt->second, &pose );
+
+    // save pose
+    poses[link_name] = pose;
   }
+}
+
+string RobotState::getLinkName(const string &Join_name)
+{
+  // get pose
+  MapType::const_iterator it = map_.find(Join_name);
+  if (it != map_.end())
+    return it->second;
+  else
+    ROS_ERROR("Join name could not been found");
+}
+
+string RobotState::getJointName(const string &link_name)
+{
+  // get pose
+  RobotStateType::const_iterator seg = segments_.find(link_name);
+  if (seg != segments_.end())
+    return seg->second.getJoint().getName();
+  else
+    ROS_ERROR("Link name could not been found");
 }
 
 }

@@ -41,7 +41,7 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <kdl_parser/kdl_parser.hpp>
-#include <robot_state_publisher/robot_state_publisher.h>
+// #include <robot_state_publisher/robot_state_publisher.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -61,7 +61,7 @@ using namespace calib;
 // global variables
 RobotState robot_state;
 ros::Publisher vis_pub;
-robot_state_publisher::RobotStatePublisher *robot_st_publisher;
+// robot_state_publisher::RobotStatePublisher *robot_st_publisher;
 
 #define NUM_COLORS 8
 Scalar colors[NUM_COLORS] = {
@@ -273,20 +273,28 @@ int main(int argc, char **argv)
   if (!model.initParam("robot_description"))
     return EXIT_FAILURE;
 
+  // save urdf to file
+//   TiXmlDocument* output = urdf::exportURDF( model );
+//   if (!output)
+//     ROS_ERROR("Failed to save urdf file\n");
+//   else
+//     output->SaveFile("urdf_calibrated.xml");
+
+
   // create a KDL tree from Urdf Model
-  KDL::Tree kdl_tree;
-  if (!kdl_parser::treeFromUrdfModel(model, kdl_tree))
-  {
-    ROS_ERROR("Failed to construct kdl tree from urdf");
-    return EXIT_FAILURE;
-  }
+//   KDL::Tree kdl_tree;
+//   if (!kdl_parser::treeFromUrdfModel(model, kdl_tree))
+//   {
+//     ROS_ERROR("Failed to construct kdl tree from urdf");
+//     return EXIT_FAILURE;
+//   }
 
   // robot state publisher
   if (!robot_st_publisher)
     robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
 
   // robot init
-  robot_state.initFromTree(kdl_tree);
+  robot_state.initFromURDF(model);
 
   // create node
   ros::NodeHandle n; //("calib");
