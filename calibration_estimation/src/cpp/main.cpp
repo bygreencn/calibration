@@ -165,10 +165,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     image_geometry::PinholeCameraModel cam_model;
     cam_model.fromCameraInfo(robot_measurement->M_cam.at(i).cam_info);
 
-    // show info
-    cout << "i:" << i
-         << " --  camera: " << robot_measurement->M_cam.at(i).camera_id << endl;
-
     // get measurement
     const vector<geometry_msgs::Point> &pts_ros = robot_measurement->M_cam.at(i).image_points;
 
@@ -231,7 +227,9 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     marker_array.markers.push_back(marker);
 
-    // stats
+    // show info
+    cout << "i:" << i
+         << " --  camera: " << robot_measurement->M_cam.at(i).camera_id << endl;
     cout << "\tcam_model.tfFrame(): "  << cam_model.tfFrame() << endl;
     cout << "\tReproj. err = "  << err << endl;
     cout << "\trvec = " << rvec << endl;
