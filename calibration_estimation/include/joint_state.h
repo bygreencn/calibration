@@ -60,7 +60,7 @@ public:
   bool empty();
 
   /// \brief Reset postion vector to zeros
-  bool reset();
+  void reset();
 
   /// \brief Update one joint postions
   bool update(const std::string &joint_name,

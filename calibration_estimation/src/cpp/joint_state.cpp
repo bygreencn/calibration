@@ -65,16 +65,13 @@ bool JointState::empty(void)
   return joint_positions_.empty();
 }
 
-bool JointState::reset(void)
+void JointState::reset(void)
 {
-  if (!empty())
+  // reset joints to zeros
+  for (JointStateType::iterator it = joint_positions_.begin();
+        it != joint_positions_.end(); it++)
   {
-    // reset joints to zeros
-    for (JointStateType::iterator it = joint_positions_.begin();
-         it != joint_positions_.end(); it++)
-    {
-      it->second = 0;
-    }
+    it->second = 0;
   }
 }
 
