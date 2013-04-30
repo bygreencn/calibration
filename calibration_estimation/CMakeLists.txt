@@ -4,7 +4,7 @@ project(calibration_estimation)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp std_msgs tf tf_conversions kdl_parser image_geometry robot_state_publisher)
+find_package(catkin REQUIRED COMPONENTS roscpp std_msgs tf tf_conversions kdl_parser image_geometry)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -44,7 +44,7 @@ catkin_package(
    INCLUDE_DIRS include
 #  LIBRARIES calibration_estimation
 #  CATKIN_DEPENDS roscpp std_msgs
- DEPENDS roscpp std_msgs tf tf_conversions kdl_parser image_geometry robot_state_publisher
+ DEPENDS roscpp std_msgs tf tf_conversions kdl_parser image_geometry
 )
 
 ###########
@@ -70,6 +70,7 @@ add_executable(run_estimation
                  src/cpp/joint_state.cpp
                  src/cpp/projection.cpp
                  src/cpp/robot_state.cpp
+                 src/cpp/robot_state_publisher.cpp
 )
 
 ## Add dependencies to the executable
@@ -78,6 +79,7 @@ add_dependencies(run_estimation ${PROJECT_NAME})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(run_estimation
   ${catkin_LIBRARIES}
+  tinyxml
 )
 
 #############

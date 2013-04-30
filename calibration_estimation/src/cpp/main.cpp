@@ -41,7 +41,6 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <kdl_parser/kdl_parser.hpp>
-// #include <robot_state_publisher/robot_state_publisher.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -52,6 +51,7 @@
 #include "joint_state.h"
 #include "projection.h"
 #include "robot_state.h"
+#include "robot_state_publisher.h"
 #include "calibration_msgs/RobotMeasurement.h"
 
 using namespace std;
@@ -59,9 +59,8 @@ using namespace cv;
 using namespace calib;
 
 // global variables
-RobotState robot_state;
+RobotStatePublisher *robot_state;
 ros::Publisher vis_pub;
-// robot_state_publisher::RobotStatePublisher *robot_st_publisher;
 
 #define NUM_COLORS 8
 Scalar colors[NUM_COLORS] = {
@@ -246,23 +245,24 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   // reset joints to zeros
-  robot_state.reset();
+  robot_state->reset();
 
   // update joints
   unsigned size = robot_measurement->M_chain.size();
   for (unsigned i = 0; i < size; i++)
   {
-    robot_state.update(robot_measurement->M_chain.at(i).chain_state.name,
-                       robot_measurement->M_chain.at(i).chain_state.position);
+    robot_state->update(robot_measurement->M_chain.at(i).chain_state.name,
+                        robot_measurement->M_chain.at(i).chain_state.position);
   }
-
-  // publish moving joints
-  robot_st_publisher->publishTransforms(robot_state.getJointPositions(),
-                                        ros::Time::now());
 
   // show messuaremets
   showMessuaremets(robot_measurement);
 }
+
+// #include "urdf_parser/urdf_parser.h"
+#include <console_bridge/console.h>
+
+#define PRINT(str, str2) cout << "str: " << str << str2
 
 int main(int argc, char **argv)
 {
@@ -289,12 +289,29 @@ int main(int argc, char **argv)
 //     return EXIT_FAILURE;
 //   }
 
+//   const urdf::Link *root = model.getRoot().get();
+//   cout << "Link name: " << root->name << endl;// << " - Joint name: " << root->parent_joint.get()->name << endl;
+//
+//   PRINT(root->child_links.size(),"\n");
+//
+//   const urdf::Link *base_link = model.links_["base_link"].get();
+//   cout << "Link name: " << base_link->name << " - Joint name: " << base_link->parent_joint.get()->name << endl;
+//   PRINT(base_link->child_links.size(),"\n");
+//   for (int i=0; i<base_link->child_links.size(); i++)
+//   {
+// //     PRINT(base_link->child_links.at(i).get()->name);
+//     PRINT(base_link->child_links.at(i).get()->parent_joint->name,": ")
+//        << base_link->child_joints.at(i).get()->name << "\n";
+// //     ->getParent().get()->parent_joint.get()->name);
+//   }
+
   // robot state publisher
-  if (!robot_st_publisher)
-    robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
+//   if (!robot_st_publisher)
+//     robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
 
   // robot init
-  robot_state.initFromURDF(model);
+  robot_state = new RobotStatePublisher();
+  robot_state->initFromURDF(model);
 
   // create node
   ros::NodeHandle n; //("calib");
