@@ -49,10 +49,10 @@ RobotStatePublisher::RobotStatePublisher()
 {
   // set publish frequency
   double publish_freq;
-  node_.param("publish_frequency", publish_freq, 50.0);
+  node_.param("publish_frequency", publish_freq, 100.0);
 
   // trigger to publish fixed joints
-  publish_interval_ = ros::Duration(1.0/max(publish_freq,1.0));
+  publish_interval_ = ros::Duration(1.0/max(publish_freq,100.0));
   timer_ = node_.createTimer(publish_interval_, &RobotStatePublisher::publishFixedTransforms, this);
 }
 
@@ -66,7 +66,9 @@ void RobotStatePublisher::publishFixedTransforms(const ros::TimerEvent &e)
 
   vector<tf::StampedTransform> tf_transforms;
   tf::StampedTransform tf_transform;
-  tf_transform.stamp_ = ros::Time::now(); //+ros::Duration(0.5);  // future publish by 0.5 seconds
+
+  ros::Time now   = ros::Time::now();
+  ros::Time delay = now + ros::Duration(0.5);
 
   // loop over all joint positions
   JointState::JointStateType::const_iterator jnt = joint_positions_.begin();
@@ -75,7 +77,19 @@ void RobotStatePublisher::publishFixedTransforms(const ros::TimerEvent &e)
     // get pose
     KDL::Frame pose;
     const string &link_name = getLinkName(jnt->first);
-    getPose(link_name, jnt->second, &pose);
+
+    if (segments_[link_name].getJoint().getType() == KDL::Joint::None)
+    {
+      // fixed Transforms
+      tf_transform.stamp_ = delay;  // future publish by 0.5 seconds
+      getPose(link_name, 0, &pose);
+    }
+    else
+    {
+      // moving transforms
+      tf_transform.stamp_ = now;
+      getPose(link_name, jnt->second, &pose);
+    }
 
     // convert KDL::Frame to tf::Transform
     tf::transformKDLToTF(pose, tf_transform);
