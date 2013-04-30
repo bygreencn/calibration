@@ -45,6 +45,9 @@
 namespace calib
 {
 
+// for debug: print a setence
+#define PRINT(str) cout << #str": " << str << endl;
+
 
 // Print vector<T>: cout << vector<T>
 template<typename T>

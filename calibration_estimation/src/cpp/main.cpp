@@ -149,7 +149,16 @@ void points2markers(const Mat board_measured_pts_3D,
 
 void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
-  visualization_msgs::MarkerArray marker_array;
+  // Working around RViz bug, it doesn't delete some points of previous markers
+  // if the number of checherboards are less
+  static visualization_msgs::MarkerArray marker_array;
+  for (int i=0; i < marker_array.markers.size(); i++)
+  {
+    marker_array.markers[i].header.stamp = ros::Time();
+    marker_array.markers[i].points.clear();
+  }
+  vis_pub.publish(marker_array);
+  marker_array.markers.clear();
 
   // generate 3D chessboard corners (board_points)
   ChessBoard cb;
@@ -256,11 +265,6 @@ void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr
   // show messuaremets
   showMessuaremets(robot_measurement);
 }
-
-// #include "urdf_parser/urdf_parser.h"
-#include <console_bridge/console.h>
-
-#define PRINT(str, str2) cout << "str: " << str << str2
 
 int main(int argc, char **argv)
 {
