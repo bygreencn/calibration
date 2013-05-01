@@ -62,11 +62,11 @@ public:
   /// \brief Reset postion vector to zeros
   void reset();
 
-  /// \brief Update one joint postions
+  /// \brief Update one joint positions
   bool update(const std::string &joint_name,
               const double      &position);
 
-  /// \brief Update joint postions (it can be an incomplete subset)
+  /// \brief Update joint positions (it can be an incomplete subset)
   bool update(const std::vector<std::string> &joint_name,
               const std::vector<double>      &position);
 

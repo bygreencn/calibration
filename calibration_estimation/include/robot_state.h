@@ -66,13 +66,17 @@ public:
   /// \brief Check if it is empty (valid)
   bool empty();
 
-  /// \brief get pose
+  /// \brief get pose (with respect to the link_name parent)
   void getPose(const std::string &link_name,
                const double angle,
                KDL::Frame *pose) const;
 
   /// \brief get poses
   void getPoses(PosesType *poses) const;
+
+  /// \brief Get Forward Kinematic (recurvise), similar to getPose but the pose
+  /// |will be in the root frame.
+  bool getFK(const std::string &link_name, KDL::Frame *pose);
 
   /// \brief Get root of the link
   std::string getRoot(const std::string &link_name) const;
@@ -97,7 +101,7 @@ protected:
   void updateTree();
 
   /// \brief KDL Joints has an ID (q_nr)
-  unsigned getJointID(const std::string &link_name) const;
+  int getJointID(const std::string &link_name) const;
 
   /// \brief Generate JntArray (KDL type) from JointState::join_state
   void generateJntArray(KDL::JntArray *jnt_array);

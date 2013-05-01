@@ -49,7 +49,7 @@ RobotStatePublisher::RobotStatePublisher()
 {
   // set publish frequency
   double publish_freq;
-  node_.param("publish_frequency", publish_freq, 100.0);
+  node_.param("publish_frequency", publish_freq, 50.0);
 
   // trigger to publish fixed joints
   publish_interval_ = ros::Duration(1.0/max(publish_freq,1.0));
@@ -63,8 +63,8 @@ RobotStatePublisher::~RobotStatePublisher()
 bool RobotStatePublisher::update(const string &joint_name,
                                  const double &position)
 {
-  // using JointState implementation
-  bool result = JointState::update(joint_name, position);
+  // using RobotState implementation
+  bool result = RobotState::update(joint_name, position);
 
   // publishing transforms right away
   const ros::TimerEvent dummy_event;
@@ -76,8 +76,8 @@ bool RobotStatePublisher::update(const string &joint_name,
 bool RobotStatePublisher::update(const vector<string> &joint_name,
                                  const vector<double> &position)
 {
-  // using JointState implementation
-  bool result = JointState::update(joint_name, position);
+  // using RobotState implementation
+  bool result = RobotState::update(joint_name, position);
 
   // publishing transforms right away
   const ros::TimerEvent dummy_event;
@@ -104,7 +104,7 @@ void RobotStatePublisher::publishTransforms(const ros::TimerEvent &e)
     KDL::Frame pose;
     const string &link_name = getLinkName(jnt->first);
 
-    if (getJointType(link_name) == KDL::Joint::None)
+    if (getJointType(jnt->first) == KDL::Joint::None)
     {
       // fixed Transforms
       tf_transform.stamp_ = delay;  // future publish by 0.5 seconds

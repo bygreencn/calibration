@@ -86,7 +86,7 @@ bool JointState::update(const std::string &joint_name,
   }
   else
   {
-    ROS_DEBUG("Join: %s does not belong to the joint positions vector.",
+    ROS_ERROR("Join: %s does not belong to the joint positions vector.",
               joint_name.c_str());
     return false;
   }

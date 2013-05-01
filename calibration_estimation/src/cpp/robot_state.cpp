@@ -118,6 +118,24 @@ bool RobotState::empty(void)
   return segments().empty();
 }
 
+bool RobotState::getFK(const std::string &link_name, KDL::Frame *pose)
+{
+  // generate Joint Array
+  KDL::JntArray q_in;
+  generateJntArray(&q_in);
+
+  // forward kinematic (recursive)
+  int result = fk_solver->JntToCart(q_in, *pose, link_name);
+
+  if (result == -1)
+    printf("q_in.rows() != tree.getNrOfJoints()");
+
+  if (result == -2)
+    printf("Link name could not been found");
+
+  return result >= 0;
+}
+
 void RobotState::getPose(const string &link_name,
                          const double angle,
                          KDL::Frame *pose) const
@@ -184,36 +202,47 @@ string RobotState::getJointName(const string &link_name) const
   if (seg != segments().end())
     return seg->second.segment.getJoint().getName();
   else
+  {
     ROS_ERROR("Link name could not been found");
+    return string("");
+  }
 }
 
-KDL::Joint::JointType RobotState::getJointType(const std::string &link_name) const
+KDL::Joint::JointType RobotState::getJointType(const std::string &join_name) const
 {
-  KDL::SegmentMap::const_iterator seg = segments().find(link_name);
+  KDL::SegmentMap::const_iterator seg = segments().find(getLinkName(join_name));
   if (seg != segments().end())
     return seg->second.segment.getJoint().getType();
   else
+  {
     ROS_ERROR("Link name could not been found");
+    return KDL::Joint::None;
+  }
 }
 
-unsigned RobotState::getJointID(const std::string &link_name) const
+int RobotState::getJointID(const std::string &join_name) const
 {
-  KDL::SegmentMap::const_iterator seg = segments().find(link_name);
-  if (seg != segments().end())
+  KDL::SegmentMap::const_iterator seg = segments().find(getLinkName(join_name));
+  if (seg != kdl_tree_->getSegments().end())
+  {
     return seg->second.q_nr;
+  }
   else
-    ROS_ERROR("Link name could not been found");
+  {
+    printf("Link name could not been found\n");
+    return -1;
+  }
 }
 
 void RobotState::generateJntArray(KDL::JntArray *jnt_array)
 {
-  jnt_array->resize(joint_positions_.size());
+  jnt_array->resize(kdl_tree_->getNrOfJoints());
   KDL::SetToZero(*jnt_array);
 
   JointStateType::const_iterator it = joint_positions_.begin();
-  for(; it != joint_positions_.begin(); it++)
+  for (; it != joint_positions_.end(); it++)
   {
-    (*jnt_array)(getJointID(it->first)) = it->second;
+    jnt_array->data(getJointID(it->first)) = it->second;
   }
 }
 
