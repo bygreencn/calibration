@@ -43,6 +43,7 @@
 #include <urdf/model.h>
 #include <map>
 #include <kdl/tree.hpp>
+#include <kdl/jntarray.hpp>
 
 namespace calib
 {
@@ -50,9 +51,7 @@ namespace calib
 class RobotState : public JointState
 {
 public:
-  typedef std::map<std::string, KDL::Segment> RobotStateType;
-  typedef std::map<std::string, std::string>  MapType;
-  typedef std::map<std::string, KDL::Frame>   PosesType;
+  typedef std::map<std::string, KDL::Frame> PosesType;
 
   RobotState();
   ~RobotState();
@@ -69,10 +68,10 @@ public:
   /// \brief get pose
   void getPose(const std::string &link_name,
                const double angle,
-               KDL::Frame *pose);
+               KDL::Frame *pose) const;
 
   /// \brief get poses
-  void getPoses(PosesType *poses);
+  void getPoses(PosesType *poses) const;
 
   /// \brief Get root of the link
   std::string getRoot(const std::string &link_name) const;
@@ -83,21 +82,25 @@ public:
   /// \brief get JointName from LinkName
   std::string getJointName(const std::string &link_name) const;
 
+  /// \brief get JointType from LinkName ('KDL::Joint::None' means fixed joint)
+  KDL::Joint::JointType getJointType(const std::string &link_name) const;
+
 protected:
-  /// \brief Clear internal data
+  /// \brief Clear internal structures
   void clear();
 
-  /// \brief Load Segments vector from a KDL tree
-  void initSegments();
+  /// \brief Update KDL tree from URDF
+  void updateTree();
 
-  /// \brief It creates the 'segments_' map and a vector of jnt names
-  void addChildren(const KDL::SegmentMap::const_iterator segment);
+  /// \brief KDL Joints has an ID (q_nr)
+  unsigned getJointID(const std::string &link_name) const;
+
+  /// \brief Get SegmentMap from KDL tree
+  const KDL::SegmentMap &segments() const { return kdl_tree_->getSegments(); }
 
 protected:
-  urdf::Model    urdf_model_;  // URDF model
-
-  RobotStateType segments_;    // (map) link_name  -> KDL::Segment
-  MapType        map_;         // (map) joint_name -> link_name
+  urdf::Model  urdf_model_;  // URDF model
+  KDL::Tree   *kdl_tree_;    // KDL tree (data from urdf but used for kinematic)
 };
 
 }

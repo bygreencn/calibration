@@ -104,7 +104,7 @@ void RobotStatePublisher::publishTransforms(const ros::TimerEvent &e)
     KDL::Frame pose;
     const string &link_name = getLinkName(jnt->first);
 
-    if (segments_[link_name].getJoint().getType() == KDL::Joint::None)
+    if (getJointType(link_name) == KDL::Joint::None)
     {
       // fixed Transforms
       tf_transform.stamp_ = delay;  // future publish by 0.5 seconds

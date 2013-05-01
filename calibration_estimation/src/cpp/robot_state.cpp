@@ -43,12 +43,14 @@ using namespace std;
 namespace calib
 {
 
-RobotState::RobotState()
+RobotState::RobotState() : kdl_tree_(0)
 {
 }
 
 RobotState::~RobotState()
 {
+  if (kdl_tree_)
+    delete kdl_tree_;
 }
 
 void RobotState::initFromURDF(const urdf::Model &model)
@@ -57,7 +59,7 @@ void RobotState::initFromURDF(const urdf::Model &model)
   urdf_model_ = model;
 
   // create internal structures
-  initSegments();
+  updateTree();
 
   // get joint names
   vector<string> joint_names;
@@ -81,68 +83,44 @@ void RobotState::getJointNames(vector<string> *joint_name) const
 
 void RobotState::clear()
 {
-  segments_.clear();
-  map_.clear();
+  urdf_model_.clear();
+
+  if (kdl_tree_)
+    delete kdl_tree_;
 }
 
-void RobotState::initSegments()
+void RobotState::updateTree()
 {
-  // cleanning data
-  clear();
+  // delete current KDL tree
+  if (kdl_tree_)
+    delete kdl_tree_;
 
   // convert URDF to KDL tree
-  KDL::Tree kdl_tree;
-  if (!kdl_parser::treeFromUrdfModel(urdf_model_, kdl_tree))
+  kdl_tree_ = new KDL::Tree();
+  if (!kdl_parser::treeFromUrdfModel(urdf_model_, *kdl_tree_))
   {
     ROS_ERROR("Failed to construct kdl tree from urdf");
-  }
-
-  // walk the tree recursively and add segments to segments_
-  addChildren(kdl_tree.getRootSegment());
-}
-
-// add children to correct maps
-void RobotState::addChildren(const KDL::SegmentMap::const_iterator segment)
-{
-  // getting children
-  const vector<KDL::SegmentMap::const_iterator> &children = segment->second.children;
-  for (unsigned int i = 0; i < children.size(); i++)
-  {
-    // find current child
-    KDL::Segment child = children[i]->second.segment;
-
-    const string &link_name  = child.getName();
-    const string &joint_name = child.getJoint().getName();
-
-    // add segment
-    segments_[link_name] = child;
-
-    // update id tables
-    map_[joint_name] = link_name;
-
-    // continue recursively
-    addChildren(children[i]);
   }
 }
 
 bool RobotState::empty(void)
 {
-  return segments_.empty();
+  return segments().empty();
 }
 
 void RobotState::getPose(const string &link_name,
-                                  const double angle,
-                                  KDL::Frame *pose)
+                         const double angle,
+                         KDL::Frame *pose) const
 {
   // get pose
-  RobotStateType::const_iterator seg = segments_.find(link_name);
-  if (seg != segments_.end())
-    *pose = seg->second.pose(angle);
+  KDL::SegmentMap::const_iterator seg = segments().find(link_name);
+  if (seg != segments().end())
+    *pose = seg->second.segment.pose(angle);
   else
     ROS_ERROR("Link name could not been found");
 }
 
-void RobotState::getPoses(PosesType *poses)
+void RobotState::getPoses(PosesType *poses) const
 {
   poses->clear();
 
@@ -153,7 +131,7 @@ void RobotState::getPoses(PosesType *poses)
     // get pose
     KDL::Frame pose;
     const string &link_name = getLinkName(jnt->first);
-    getPose( link_name, jnt->second, &pose );
+    getPose(link_name, jnt->second, &pose);
 
     // save pose
     (*poses)[link_name] = pose;
@@ -182,9 +160,9 @@ string RobotState::getRoot(const string &link_name) const
 string RobotState::getLinkName(const string &Join_name) const
 {
   // get pose
-  MapType::const_iterator it = map_.find(Join_name);
-  if (it != map_.end())
-    return it->second;
+  map <string, boost::shared_ptr<urdf::Joint > >::const_iterator it = urdf_model_.joints_.find(Join_name);
+  if (it != urdf_model_.joints_.end())
+    return it->second->child_link_name;
   else
     ROS_ERROR("Join name could not been found");
 }
@@ -192,9 +170,27 @@ string RobotState::getLinkName(const string &Join_name) const
 string RobotState::getJointName(const string &link_name) const
 {
   // get pose
-  RobotStateType::const_iterator seg = segments_.find(link_name);
-  if (seg != segments_.end())
-    return seg->second.getJoint().getName();
+  KDL::SegmentMap::const_iterator seg = segments().find(link_name);
+  if (seg != segments().end())
+    return seg->second.segment.getJoint().getName();
+  else
+    ROS_ERROR("Link name could not been found");
+}
+
+KDL::Joint::JointType RobotState::getJointType(const std::string &link_name) const
+{
+  KDL::SegmentMap::const_iterator seg = segments().find(link_name);
+  if (seg != segments().end())
+    return seg->second.segment.getJoint().getType();
+  else
+    ROS_ERROR("Link name could not been found");
+}
+
+unsigned RobotState::getJointID(const std::string &link_name) const
+{
+  KDL::SegmentMap::const_iterator seg = segments().find(link_name);
+  if (seg != segments().end())
+    return seg->second.q_nr;
   else
     ROS_ERROR("Link name could not been found");
 }
