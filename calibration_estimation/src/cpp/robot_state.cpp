@@ -43,14 +43,13 @@ using namespace std;
 namespace calib
 {
 
-RobotState::RobotState() : kdl_tree_(0)
+RobotState::RobotState() : kdl_tree_(0), fk_solver(0)
 {
 }
 
 RobotState::~RobotState()
 {
-  if (kdl_tree_)
-    delete kdl_tree_;
+  deletePtrs();
 }
 
 void RobotState::initFromURDF(const urdf::Model &model)
@@ -84,16 +83,24 @@ void RobotState::getJointNames(vector<string> *joint_name) const
 void RobotState::clear()
 {
   urdf_model_.clear();
-
-  if (kdl_tree_)
-    delete kdl_tree_;
+  deletePtrs();
 }
 
-void RobotState::updateTree()
+void RobotState::deletePtrs()
 {
   // delete current KDL tree
   if (kdl_tree_)
     delete kdl_tree_;
+
+  // delete current fk_solver
+  if (fk_solver)
+    delete fk_solver;
+}
+
+void RobotState::updateTree()
+{
+  // delete any previous pointers, if exist
+  deletePtrs();
 
   // convert URDF to KDL tree
   kdl_tree_ = new KDL::Tree();
@@ -101,6 +108,9 @@ void RobotState::updateTree()
   {
     ROS_ERROR("Failed to construct kdl tree from urdf");
   }
+
+  // create TreeFkSolverPos_recursive from KDL tree
+  fk_solver = new KDL::TreeFkSolverPos_recursive(*kdl_tree_);
 }
 
 bool RobotState::empty(void)

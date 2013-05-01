@@ -44,6 +44,7 @@
 #include <map>
 #include <kdl/tree.hpp>
 #include <kdl/jntarray.hpp>
+#include  <kdl/treefksolverpos_recursive.hpp>
 
 namespace calib
 {
@@ -85,9 +86,12 @@ public:
   /// \brief get JointType from LinkName ('KDL::Joint::None' means fixed joint)
   KDL::Joint::JointType getJointType(const std::string &link_name) const;
 
-protected:
   /// \brief Clear internal structures
   void clear();
+
+protected:
+  /// \brief Delete pointers
+  void deletePtrs();
 
   /// \brief Update KDL tree from URDF
   void updateTree();
@@ -104,6 +108,8 @@ protected:
 protected:
   urdf::Model  urdf_model_;  // URDF model
   KDL::Tree   *kdl_tree_;    // KDL tree (data from urdf but used for kinematic)
+
+  KDL::TreeFkSolverPos_recursive *fk_solver;  // forward kinematic
 };
 
 }
