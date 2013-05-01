@@ -195,4 +195,16 @@ unsigned RobotState::getJointID(const std::string &link_name) const
     ROS_ERROR("Link name could not been found");
 }
 
+void RobotState::generateJntArray(KDL::JntArray *jnt_array)
+{
+  jnt_array->resize(joint_positions_.size());
+  KDL::SetToZero(*jnt_array);
+
+  JointStateType::const_iterator it = joint_positions_.begin();
+  for(; it != joint_positions_.begin(); it++)
+  {
+    (*jnt_array)(getJointID(it->first)) = it->second;
+  }
+}
+
 }

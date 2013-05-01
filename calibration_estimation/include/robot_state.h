@@ -95,6 +95,9 @@ protected:
   /// \brief KDL Joints has an ID (q_nr)
   unsigned getJointID(const std::string &link_name) const;
 
+  /// \brief Generate JntArray (KDL type) from JointState::join_state
+  void generateJntArray(KDL::JntArray *jnt_array);
+
   /// \brief Get SegmentMap from KDL tree
   const KDL::SegmentMap &segments() const { return kdl_tree_->getSegments(); }
 
@@ -106,3 +109,4 @@ protected:
 }
 
 #endif // ROBOT_STATE_H
+
