@@ -95,4 +95,33 @@ void cv2ros(const Mat &pts_cv, vector<geometry_msgs::Point> *pts_ros)
   }
 }
 
+void kdl2cv(const KDL::Frame &frame,
+            OutputArray _R,
+            OutputArray _t)
+{
+  // get rvec
+  cv::Matx33d R;
+
+  R(0,0) = frame.M(0,0);
+  R(0,1) = frame.M(0,1);
+  R(0,2) = frame.M(0,2);
+  R(1,0) = frame.M(1,0);
+  R(1,1) = frame.M(1,1);
+  R(1,2) = frame.M(1,2);
+  R(2,0) = frame.M(2,0);
+  R(2,1) = frame.M(2,1);
+  R(2,2) = frame.M(2,2);
+
+  Mat(R).copyTo(_R);
+
+  // get tvec
+  cv::Vec3d t;
+
+  t(0) = frame.p[0];
+  t(1) = frame.p[1];
+  t(2) = frame.p[2];
+
+  Mat(t).copyTo(_t);
+}
+
 }

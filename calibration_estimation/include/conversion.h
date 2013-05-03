@@ -39,6 +39,7 @@
 
 #include <geometry_msgs/Point.h>
 #include <opencv2/core/core.hpp>
+#include <kdl/frames.hpp>
 
 namespace calib
 {
@@ -50,6 +51,8 @@ void ros2cv(const std::vector<geometry_msgs::Point> &pts_ros, cv::Mat_<double> *
 
 /// \brief Conversion functions: convert OpenCV to ROS points
 void cv2ros(const cv::Mat &pt_cv, std::vector<geometry_msgs::Point> *pt_ros);
+
+void kdl2cv(const KDL::Frame &frame, cv::OutputArray R, cv::OutputArray t);
 
 }
 
