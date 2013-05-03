@@ -61,14 +61,14 @@ void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
   points2D->clear();
   points2D->reserve(n);
 
-  for(size_t i=0; i<n; i++)
+  for (size_t i = 0; i < n; i++)
   {
     cv::Point2d current_pt;
     projectPoints(cam_model, xyz[i], &current_pt);
     points2D->push_back(current_pt);
   }
 }
- 
+
 double computeReprojectionErrors(InputArray points3D,
                                  InputArray points2D,
                                  InputArray cameraMatrix,
@@ -86,7 +86,7 @@ double computeReprojectionErrors(InputArray points3D,
   projectPoints(points3D, rvec, tvec, cameraMatrix, distCoeffs, proj_points2D);
 
   // save output if it is needed (no default parameter)
-  if( _proj_points2D.needed() )
+  if (_proj_points2D.needed())
   {
     proj_points2D.copyTo(_proj_points2D);
   }
@@ -95,19 +95,32 @@ double computeReprojectionErrors(InputArray points3D,
   return norm(points2D, proj_points2D, CV_L2);
 }
 
-void project3dPoints(const Mat &points,
-                     const Mat &rvec,
-                     const Mat &tvec,
-                     Mat *modif_points )
+void transform3DPoints(const Mat &points,
+                       const Mat &rvec,
+                       const Mat &tvec,
+                       Mat *modif_points)
 {
-  Mat R;
-  Rodrigues(rvec, R);
-
   Mat transformation;
-  cv::hconcat(R, tvec, transformation);
+
+  if ((rvec.rows == 3 && rvec.cols == 1) || (rvec.rows == 1 && rvec.cols == 3))
+  {
+    Mat R;
+    Rodrigues(rvec, R);
+
+    cv::hconcat(R, tvec, transformation);
+  }
+  else
+    if (rvec.rows == 3 && rvec.cols == 3)
+    {
+      cv::hconcat(rvec, tvec, transformation);
+    }
+    else
+    {
+      cerr << "wrong size!" << endl;
+      return;
+    }
 
   transform(points, *modif_points, transformation);
 }
-
 
 }
