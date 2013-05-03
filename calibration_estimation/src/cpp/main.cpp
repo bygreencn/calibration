@@ -71,7 +71,7 @@ Scalar colors[NUM_COLORS] = {
 
 /// \brief Select a color randomly
 inline Scalar chooseRandomColor() { return colors[rand() % NUM_COLORS]; }
-inline Scalar chooseRandomColor(int i) { return colors[i % NUM_COLORS]; }
+inline Scalar chooseColor(int i)  { return colors[i % NUM_COLORS]; }
 
 // TODO: read this information from the system.yaml
 void getCheckboardSize(const string &target_id, ChessBoard *cb)
@@ -147,6 +147,39 @@ void points2markers(const Mat board_measured_pts_3D,
   cv2ros(board_measured_pts_3D, &(marker->points));
 }
 
+void transform3DPoints(const cv::Mat &points,
+                       const KDL::Frame &frame,
+                       cv::Mat *modif_points )
+{
+  cv::Mat R, t;
+  kdl2cv(frame, R, t);
+
+  Mat transformation;
+  cv::hconcat(R, t, transformation);
+
+  transform(points, *modif_points, transformation);
+}
+
+void transform3DPoints(const cv::Mat &points,
+                       const string &frame,
+                       cv::Mat *modif_points )
+{
+  KDL::Frame pose;
+  robot_state->getFK(frame, &pose);
+  transform3DPoints(points, pose, modif_points);
+}
+
+void transform3DPoints(const cv::Mat &points,
+                       const string &frame1,
+                       const string &frame2,
+                       cv::Mat *modif_points )
+{
+  KDL::Frame pose1, pose2;
+  robot_state->getFK(frame1, &pose1);
+  robot_state->getFK(frame2, &pose2);
+  transform3DPoints(points, pose2 * pose1.Inverse(), modif_points);
+}
+
 void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   // Working around RViz bug, it doesn't delete some points of previous markers
@@ -168,7 +201,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
   // read image points
   size_t size = robot_measurement->M_cam.size();
-  for(size_t i = 0; i < size; i++)
+  for (size_t i = 0; i < size; i++)
   {
     // get camera info
     image_geometry::PinholeCameraModel cam_model;
@@ -200,7 +233,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     // board_measured_pts
     Mat board_measured_pts_3D, board_measured_pts_3D_tmp;
-    project3dPoints(Mat(board_model_pts_3D), rvec, tvec, &board_measured_pts_3D);
+    transform3DPoints(Mat(board_model_pts_3D), rvec, tvec, &board_measured_pts_3D);
 
     // TODO: Same frame!!
 //     Matx31d trans(cam_model.Tx(), cam_model.Ty(), 0);
@@ -229,12 +262,43 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     {
       setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
                       cam_model.tfFrame(), &marker,
-                      chooseRandomColor(i));
+                      chooseColor(i));
     }
 
     points2markers(board_measured_pts_3D, &marker);
-
     marker_array.markers.push_back(marker);
+
+
+    //! choose one (example). TODO: delete this!
+    string frame, frame2, f;
+    visualization_msgs::Marker m, m2;
+    if (i == 0)
+    {
+      frame  = "narrow_stereo_optical_frame"; //cam_model.tfFrame();
+      frame2 = "wide_stereo_optical_frame";
+      f = "base_footprint";
+//       frame2 = f;
+
+      Mat new_pts_3D, new_pts_3D_2;
+      transform3DPoints(Mat(board_model_pts_3D), frame, &new_pts_3D);
+
+      setMarkers(i, "new",
+                    f, &m,
+                    colors[i+1]);
+      points2markers(new_pts_3D, &m);
+      marker_array.markers.push_back(m);
+
+
+      cv::Mat rvec, tvec;
+      transform3DPoints(new_pts_3D, frame, frame2, &new_pts_3D_2);
+
+      setMarkers(i, "new2",
+                    f, &m2,
+                    colors[i+2]);
+      points2markers(new_pts_3D_2, &m2);
+      marker_array.markers.push_back(m2);
+    }
+
 
     // show info
     cout << "i:" << i
