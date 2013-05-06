@@ -44,7 +44,7 @@
 #include <map>
 #include <kdl/tree.hpp>
 #include <kdl/jntarray.hpp>
-#include  <kdl/treefksolverpos_recursive.hpp>
+#include <kdl/treefksolverpos_recursive.hpp>
 
 namespace calib
 {
@@ -66,10 +66,14 @@ public:
   /// \brief Check if it is empty (valid)
   bool empty();
 
-  /// \brief get pose (with respect to the link_name parent)
-  void getPose(const std::string &link_name,
-               const double angle,
-               KDL::Frame *pose) const;
+  /// \brief get pose (relative, with respect to the link_name parent)
+  void getRelativePose(const std::string &link_name,
+                       const double angle,
+                       KDL::Frame *pose) const;
+
+  /// \brief get pose (using the current joint angle in joint_positions_)
+  void getRelativePose(const std::string &link_name,
+                       KDL::Frame *pose) const;
 
   /// \brief get poses
   void getPoses(PosesType *poses) const;
@@ -78,8 +82,8 @@ public:
   /// |will be in the root frame.
   bool getFK(const std::string &link_name, KDL::Frame *pose);
 
-  /// \brief Get root of the link
-  std::string getRoot(const std::string &link_name) const;
+  /// \brief Get link root (it is not the tree root)
+  std::string getLinkRoot(const std::string &link_name) const;
 
   /// \brief get LinkName from JointName
   std::string getLinkName(const std::string &Join_name) const;
@@ -93,12 +97,27 @@ public:
   /// \brief Clear internal structures
   void clear();
 
+  /// \brief Get URDF Pose for a given link/frame
+  urdf::Pose getPose(const std::string &link_name)
+  {
+    std::string jnt = getJointName(link_name);
+    return urdf_model_.joints_[jnt]->parent_to_joint_origin_transform;
+  }
+
+  /// \brief Set URDF Pose
+  void setPose(const std::string &link_name, const urdf::Pose &pose)
+  {
+    std::string jnt = getJointName(link_name);
+    urdf_model_.joints_[jnt]->parent_to_joint_origin_transform = pose;
+  }
+
+  /// \brief Update KDL tree from URDF
+  void updateTree();
+
 protected:
   /// \brief Delete pointers
   void deletePtrs();
 
-  /// \brief Update KDL tree from URDF
-  void updateTree();
 
   /// \brief KDL Joints has an ID (q_nr)
   int getJointID(const std::string &link_name) const;
@@ -108,6 +127,7 @@ protected:
 
   /// \brief Get SegmentMap from KDL tree
   const KDL::SegmentMap &segments() const { return kdl_tree_->getSegments(); }
+
 
 protected:
   urdf::Model  urdf_model_;  // URDF model

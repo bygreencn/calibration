@@ -108,20 +108,20 @@ void RobotStatePublisher::publishTransforms(const ros::TimerEvent &e)
     {
       // fixed Transforms
       tf_transform.stamp_ = delay;  // future publish by 0.5 seconds
-      getPose(link_name, 0, &pose);
+      getRelativePose(link_name, 0, &pose);
     }
     else
     {
       // moving transforms
       tf_transform.stamp_ = now;
-      getPose(link_name, jnt->second, &pose);
+      getRelativePose(link_name, jnt->second, &pose);
     }
 
     // convert KDL::Frame to tf::Transform
     tf::transformKDLToTF(pose, tf_transform);
 
     // complete tf::Transform information
-    tf_transform.frame_id_ = getRoot(link_name);
+    tf_transform.frame_id_ = getLinkRoot(link_name);
     tf_transform.child_frame_id_ = link_name;
 
     tf_transforms.push_back(tf_transform);

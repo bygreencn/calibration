@@ -136,9 +136,9 @@ bool RobotState::getFK(const std::string &link_name, KDL::Frame *pose)
   return result >= 0;
 }
 
-void RobotState::getPose(const string &link_name,
-                         const double angle,
-                         KDL::Frame *pose) const
+void RobotState::getRelativePose(const string &link_name,
+                                 const double angle,
+                                 KDL::Frame *pose) const
 {
   // get pose
   KDL::SegmentMap::const_iterator seg = segments().find(link_name);
@@ -146,6 +146,20 @@ void RobotState::getPose(const string &link_name,
     *pose = seg->second.segment.pose(angle);
   else
     ROS_ERROR("Link name could not been found");
+}
+
+void RobotState::getRelativePose(const string &link_name,
+                                 KDL::Frame *pose) const
+{
+  string jnt_name = getJointName(link_name);
+  JointState::JointStateType::const_iterator jnt = joint_positions_.find(jnt_name);
+  if (jnt != joint_positions_.end())
+  {
+    double current_angle = jnt->second;
+    getRelativePose(link_name, current_angle, pose);
+  }
+  else
+    ROS_ERROR("Join name could not been found");
 }
 
 void RobotState::getPoses(PosesType *poses) const
@@ -159,14 +173,14 @@ void RobotState::getPoses(PosesType *poses) const
     // get pose
     KDL::Frame pose;
     const string &link_name = getLinkName(jnt->first);
-    getPose(link_name, jnt->second, &pose);
+    getRelativePose(link_name, jnt->second, &pose);
 
     // save pose
     (*poses)[link_name] = pose;
   }
 }
 
-string RobotState::getRoot(const string &link_name) const
+string RobotState::getLinkRoot(const string &link_name) const
 {
   const urdf::Link *link = urdf_model_.getLink(link_name).get();
   if (!link)
