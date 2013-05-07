@@ -147,6 +147,7 @@ void points2markers(const Mat board_measured_pts_3D,
   cv2ros(board_measured_pts_3D, &(marker->points));
 }
 
+/// \brief transform 3D using the Rotation and Translation defined in frame
 void transform3DPoints(const cv::Mat &points,
                        const KDL::Frame &frame,
                        cv::Mat *modif_points )
@@ -160,6 +161,7 @@ void transform3DPoints(const cv::Mat &points,
   transform(points, *modif_points, transformation);
 }
 
+/// \brief transform 3D using the Rotation and Translation defined in frame
 void transform3DPoints(const cv::Mat &points,
                        const string &frame,
                        cv::Mat *modif_points )
@@ -169,6 +171,7 @@ void transform3DPoints(const cv::Mat &points,
   transform3DPoints(points, pose, modif_points);
 }
 
+/// \brief transform 3D from frame1 to frame2
 void transform3DPoints(const cv::Mat &points,
                        const string &frame1,
                        const string &frame2,
