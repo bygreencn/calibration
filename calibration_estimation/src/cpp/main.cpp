@@ -226,10 +226,12 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     // find chessboard pose using solvePnP
     Mat rvec, tvec;
     vector<Point2d> expected_pts_2D;
+    Mat D; // empty for rectified cameras
+    // Mat D = cam_model.distortionCoeffs();  // for non-rectified cameras
     double err = findChessboardPose(board_model_pts_3D, measured_pts_2D,
                                     cam_model.intrinsicMatrix(),
                                     cam_model.distortionCoeffs(),
-                                    rvec, tvec, expected_pts_2D);
+                                    D, rvec, tvec, expected_pts_2D);
 
     // board_measured_pts
     Mat board_measured_pts_3D, board_measured_pts_3D_tmp;
