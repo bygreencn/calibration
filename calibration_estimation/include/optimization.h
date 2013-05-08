@@ -53,18 +53,19 @@ struct ReprojectionErrorWithQuaternions {
       fx(fx), fy(fy), cx(cx), cy(cy) {}
 
   template <typename T>
-  bool operator()(const T* const camera_extrinsic,
+  bool operator()(const T* const camera_rotation,
+                  const T* const camera_translation,
                   const T* const point,
                   T *residuals) const
   {
-    // camera_extrinsic[0,1,2,3] are the quaternions
+    // camera_rotation are the quaternions
     T p[3];
-    ceres::QuaternionRotatePoint(camera_extrinsic, point, p);
+    ceres::QuaternionRotatePoint(camera_rotation, point, p);
 
-    // camera_extrinsic[4,5,6] are the translation
-    p[0] += camera_extrinsic[4];
-    p[1] += camera_extrinsic[5];
-    p[2] += camera_extrinsic[6];
+    // camera_translation is the translation
+    p[0] += camera_translation[0];
+    p[1] += camera_translation[1];
+    p[2] += camera_translation[2];
 
     // Compute the projection
     T xp = p[0] / p[2];
@@ -87,7 +88,7 @@ struct ReprojectionErrorWithQuaternions {
                                      const double fy,
                                      const double cx,
                                      const double cy) {
-    return (new ceres::AutoDiffCostFunction<ReprojectionErrorWithQuaternions, 2, 7, 3>(
+    return (new ceres::AutoDiffCostFunction<ReprojectionErrorWithQuaternions, 2, 4, 3, 3>(
                 new ReprojectionErrorWithQuaternions(observed_x, observed_y, fx, fy, cx, cy)));
   }
 

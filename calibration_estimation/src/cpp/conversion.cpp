@@ -99,29 +99,57 @@ void kdl2cv(const KDL::Frame &frame,
             OutputArray _R,
             OutputArray _t)
 {
-  // get rvec
+  kdl2cv(frame.M, _R);
+  kdl2cv(frame.p, _t);
+}
+
+void kdl2cv(const KDL::Rotation &rotation, cv::OutputArray _R)
+{
+  // get rotation
   cv::Matx33d R;
 
-  R(0,0) = frame.M(0,0);
-  R(0,1) = frame.M(0,1);
-  R(0,2) = frame.M(0,2);
-  R(1,0) = frame.M(1,0);
-  R(1,1) = frame.M(1,1);
-  R(1,2) = frame.M(1,2);
-  R(2,0) = frame.M(2,0);
-  R(2,1) = frame.M(2,1);
-  R(2,2) = frame.M(2,2);
+  R(0, 0) = rotation(0, 0);
+  R(0, 1) = rotation(0, 1);
+  R(0, 2) = rotation(0, 2);
+  R(1, 0) = rotation(1, 0);
+  R(1, 1) = rotation(1, 1);
+  R(1, 2) = rotation(1, 2);
+  R(2, 0) = rotation(2, 0);
+  R(2, 1) = rotation(2, 1);
+  R(2, 2) = rotation(2, 2);
 
   Mat(R).copyTo(_R);
+}
 
-  // get tvec
+void kdl2cv(const KDL::Vector &translation, cv::OutputArray _t)
+{
+  // get translation
   cv::Vec3d t;
 
-  t(0) = frame.p[0];
-  t(1) = frame.p[1];
-  t(2) = frame.p[2];
+  t(0) = translation[0];
+  t(1) = translation[1];
+  t(2) = translation[2];
 
   Mat(t).copyTo(_t);
+}
+
+void serialize(const cv::Point3d &in, double out[3])
+{
+  out[0] = in.x;
+  out[1] = in.y;
+  out[2] = in.z;
+}
+
+void serialize(const KDL::Rotation &R, double camera_rotation[4])
+{
+  R.GetQuaternion(camera_rotation[0], camera_rotation[1], camera_rotation[2], camera_rotation[3]);
+}
+
+void serialize(const KDL::Vector &translation, double camera_translation[3])
+{
+  camera_translation[0] = translation.data[0];
+  camera_translation[1] = translation.data[1];
+  camera_translation[2] = translation.data[2];
 }
 
 }

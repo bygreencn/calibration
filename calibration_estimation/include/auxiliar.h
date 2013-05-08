@@ -39,6 +39,7 @@
 
 #include <ros/ros.h>
 #include <urdf/model.h>
+#include <opencv2/core/core.hpp>
 #include <kdl_parser/kdl_parser.hpp>
 #include "joint_state.h"
 
@@ -56,6 +57,8 @@ std::ostream &operator <<(std::ostream &os, const std::vector<T> &v)
   std::copy(v.begin(), v.end(), std::ostream_iterator<T>(os, " "));
   return os;
 }
+
+void print_array(double *array, unsigned size, const std::string &msg =std::string(""));
 
 }
 

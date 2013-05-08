@@ -52,7 +52,13 @@ void ros2cv(const std::vector<geometry_msgs::Point> &pts_ros, cv::Mat_<double> *
 /// \brief Conversion functions: convert OpenCV to ROS points
 void cv2ros(const cv::Mat &pt_cv, std::vector<geometry_msgs::Point> *pt_ros);
 
-void kdl2cv(const KDL::Frame &frame, cv::OutputArray R, cv::OutputArray t);
+void kdl2cv(const KDL::Frame    &frame,       cv::OutputArray R, cv::OutputArray t);
+void kdl2cv(const KDL::Rotation &rotation,    cv::OutputArray R);
+void kdl2cv(const KDL::Vector   &translation, cv::OutputArray t);
+
+void serialize(const cv::Point3d &in, double out[3]);
+void serialize(const KDL::Rotation &rotation,    double camera_rotation[4]);
+void serialize(const KDL::Vector   &translation, double camera_translation[3]);
 
 }
 

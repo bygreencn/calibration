@@ -212,7 +212,8 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   // one camera 3D points (used solvePnP for now, but maybe
   // multiview triangulation can be used as initilization)
   vector<double *> param_point_3D;
-  vector<double *> param_camera;
+  vector<double *> param_camera_rot;
+  vector<double *> param_camera_trans;
 
   KDL::Frame T, T0;
   vector<string> frame_name;
@@ -325,9 +326,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       for (int j=0; j < board_model_pts_3D.size(); j++)
       {
         double *current_point = new double[3];
-        current_point[0] = board_model_pts_3D[i].x;
-        current_point[1] = board_model_pts_3D[i].y;
-        current_point[2] = board_model_pts_3D[i].z;
+        serialize(board_model_pts_3D[i], current_point);
 
         param_point_3D.push_back(current_point);
       }
@@ -344,25 +343,13 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       KDL::Frame current_position = T0 * T.Inverse();
 
       // generate cameras
-      double *camera = new double[7];
-      KDL::Vector axis;
-      current_position.M.GetRotAngle(axis);
-      Mat_<double> axis_kk(3,1,axis.data);
-      cout << "axis_kk: " << axis_kk << endl;
+      double *camera_rot = new double[4];
+      serialize(current_position.M, camera_rot);
+      param_camera_rot.push_back(camera_rot);
 
-      current_position.M.GetQuaternion(camera[0],
-                                       camera[1],
-                                       camera[2],
-                                       camera[3]);
-
-      camera[4] = current_position.p.x();
-      camera[5] = current_position.p.y();
-      camera[6] = current_position.p.z();
-
-      Mat_<double> kk(7,1,camera);
-      cout << kk << endl;
-      param_camera.push_back(camera);
-
+      double *camera_trans = new double[3];
+      serialize(current_position.p, camera_trans);
+      param_camera_trans.push_back(camera_trans);
 
       Matx33d intrinsicMatrix = cam_model.intrinsicMatrix();
       // feed optimazer with data
@@ -378,9 +365,10 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
                                                    intrinsicMatrix(1,2));
 
         problem.AddResidualBlock(cost_function,
-                                NULL,               // squared loss
-                                param_camera[i-1],  // camera i
-                                param_point_3D[j]); // point j
+                                NULL,                       // squared loss
+                                param_camera_rot[i-1],      // camera_rot i
+                                param_camera_trans[i-1],    // camera_trans i
+                                param_point_3D[j]);         // point j
       }
     }
 
@@ -400,9 +388,8 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
   {
-    Mat_<double> kk(7,1,param_camera[i]);
-    cout << "param_camera[i]: " << kk << endl;
-
+    print_array(param_camera_rot[i], 4, "param_camera[i]:");
+    print_array(param_camera_trans[i], 3, "               :");
   }
 
   ceres::Solver::Options options;
@@ -418,46 +405,46 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   cout << "\n";
   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
   {
-    Mat_<double> kk(7,1,param_camera[i]);
-    cout << "param_camera[i]: " << kk << endl;
-
+    print_array(param_camera_rot[i], 4, "param_camera[i]:");
+    print_array(param_camera_trans[i], 3, "               :");
   }
 
 //   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
 //   {
 //     KDL::Frame frame;
-//     double *camera = param_camera[i];
-//     frame.M.Quaternion(camera[0],
-//                        camera[1],
-//                        camera[2],
-//                        camera[3]);
+//     double *camera_rot = param_camera_rot[i];
+//     double *camera_trans = param_camera_trans[i];
+//     frame.M.Quaternion(camera_rot[0],
+//                        camera_rot[1],
+//                        camera_rot[2],
+//                        camera_rot[3]);
 //
-//     frame.p.data[0] = camera[4];
-//     frame.p.data[1] = camera[5];
-//     frame.p.data[2] = camera[6];
+//     frame.p.data[0] = camera_trans[0];
+//     frame.p.data[1] = camera_trans[1];
+//     frame.p.data[2] = camera_trans[2];
 //
 //
 //     KDL::Frame current_position = frame.Inverse() * T0;
-//     current_position.M.GetQuaternion(camera[0],
-//                                      camera[1],
-//                                      camera[2],
-//                                      camera[3]);
+//     current_position.M.GetQuaternion(camera_rot[0],
+//                                      camera_rot[1],
+//                                      camera_rot[2],
+//                                      camera_rot[3]);
 //
-//     camera[4] = current_position.p.x();
-//     camera[5] = current_position.p.y();
-//     camera[6] = current_position.p.z();
+//     camera_trans[0] = current_position.p.x();
+//     camera_trans[1] = current_position.p.y();
+//     camera_trans[2] = current_position.p.z();
 //
 //     urdf::Pose pose = robot_state->getPose(frame_name[i+1]);
-//     pose.rotation.setFromQuaternion(camera[0],
-//                                     camera[1],
-//                                     camera[2],
-//                                     camera[3]);
-//     pose.position.x = camera[4];
-//     pose.position.y = camera[5];
-//     pose.position.z = camera[6];
+//     pose.rotation.setFromQuaternion(camera_rot[0],
+//                                     camera_rot[1],
+//                                     camera_rot[2],
+//                                     camera_rot[3]);
+//     pose.position.x = camera_trans[0];
+//     pose.position.y = camera_trans[1];
+//     pose.position.z = camera_trans[2];
 //     robot_state->setPose(frame_name[i+1], pose);
 //   }
-
+//
 //   sleep(2);
 //   robot_state->updateTree();
 //   vis_pub.publish(marker_array);

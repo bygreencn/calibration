@@ -45,4 +45,10 @@ using namespace ros;
 namespace calib
 {
 
+void print_array(double *array, unsigned size, const std::string &msg)
+{
+  cv::Mat_<double> out(size, 1, array);
+  std::cout << msg << out << std::endl;
+}
+
 }
