@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS roscpp std_msgs tf tf_conversions kdl_pa
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
+FIND_PACKAGE(Ceres REQUIRED)
+
 #######################################
 ## Declare ROS messages and services ##
 #######################################
@@ -54,6 +56,7 @@ catkin_package(
 ## Specify additional locations of header files
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+  ${CERES_INCLUDES}
 )
 
 ## Declare a cpp library
@@ -80,6 +83,7 @@ add_dependencies(run_estimation ${PROJECT_NAME})
 target_link_libraries(run_estimation
   ${catkin_LIBRARIES}
   tinyxml
+  ${CERES_LIBRARIES_SHARED}
 )
 
 #############

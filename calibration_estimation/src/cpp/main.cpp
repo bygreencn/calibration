@@ -44,6 +44,7 @@
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <opencv2/calib3d/calib3d.hpp>
+#include <assert.h>
 
 #include "auxiliar.h"
 #include "chessboard.h"
@@ -53,6 +54,8 @@
 #include "robot_state.h"
 #include "robot_state_publisher.h"
 #include "calibration_msgs/RobotMeasurement.h"
+
+#include "optimization.h"
 
 using namespace std;
 using namespace cv;
@@ -202,6 +205,18 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   vector<Point3d> board_model_pts_3D;
   cb.generateCorners(&board_model_pts_3D);
 
+
+
+  ceres::Problem problem;
+
+  // one camera 3D points (used solvePnP for now, but maybe
+  // multiview triangulation can be used as initilization)
+  vector<double *> param_point_3D;
+  vector<double *> param_camera;
+
+  KDL::Frame T, T0;
+  vector<string> frame_name;
+
   // read image points
   size_t size = robot_measurement->M_cam.size();
   for (size_t i = 0; i < size; i++)
@@ -248,26 +263,24 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
 
     // checkboard visualization
-    // TODO: some frame are hard code here. Is it a possible error in the bag?
     visualization_msgs::Marker marker;
+    string current_frame;
+
+    // TODO: some frame are hard code here. Is it a possible error in the bag?
     if( robot_measurement->M_cam.at(i).camera_id == "narrow_right_rect" )
-    {
-      setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
-                    "narrow_stereo_r_stereo_camera_optical_frame", &marker,
-                    colors[i]);
-    }
+      current_frame = "narrow_stereo_r_stereo_camera_optical_frame";
     else if( robot_measurement->M_cam.at(i).camera_id == "wide_right_rect" )
-    {
-      setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
-                    "wide_stereo_r_stereo_camera_optical_frame", &marker,
-                    colors[i]);
-    }
+      current_frame = "narrow_stereo_r_stereo_camera_optical_frame";
+    else if( cam_model.tfFrame() == "/head_mount_kinect_rgb_optical_frame" )
+      current_frame = "head_mount_kinect_rgb_optical_frame";
     else
-    {
-      setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
-                      cam_model.tfFrame(), &marker,
-                      chooseColor(i));
-    }
+      current_frame = cam_model.tfFrame();
+
+    frame_name.push_back(current_frame);
+    setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
+               current_frame, &marker,
+               chooseColor(i));
+
 
     points2markers(board_measured_pts_3D, &marker);
     marker_array.markers.push_back(marker);
@@ -304,6 +317,74 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     }
 
 
+    //! Optimization
+
+    if (i == 0)
+    {
+      // generate 3D points
+      for (int j=0; j < board_model_pts_3D.size(); j++)
+      {
+        double *current_point = new double[3];
+        current_point[0] = board_model_pts_3D[i].x;
+        current_point[1] = board_model_pts_3D[i].y;
+        current_point[2] = board_model_pts_3D[i].z;
+
+        param_point_3D.push_back(current_point);
+      }
+
+      // T_0 (camera '0' KDL::Frame to robot)
+      cout << "0: ";
+      robot_state->getFK(current_frame, &T0);
+    }
+    else {
+      cout << "1: " << current_frame << ": ";
+      robot_state->getFK(current_frame, &T);
+
+      cout << "2: ";
+      KDL::Frame current_position = T0 * T.Inverse();
+
+      // generate cameras
+      double *camera = new double[7];
+      KDL::Vector axis;
+      current_position.M.GetRotAngle(axis);
+      Mat_<double> axis_kk(3,1,axis.data);
+      cout << "axis_kk: " << axis_kk << endl;
+
+      current_position.M.GetQuaternion(camera[0],
+                                       camera[1],
+                                       camera[2],
+                                       camera[3]);
+
+      camera[4] = current_position.p.x();
+      camera[5] = current_position.p.y();
+      camera[6] = current_position.p.z();
+
+      Mat_<double> kk(7,1,camera);
+      cout << kk << endl;
+      param_camera.push_back(camera);
+
+
+      Matx33d intrinsicMatrix = cam_model.intrinsicMatrix();
+      // feed optimazer with data
+      assert(measured_pts_2D.size() == board_model_pts_3D.size());
+      for (int j = 0; j < measured_pts_2D.size(); j++)
+      {
+        ceres::CostFunction *cost_function =
+          ReprojectionErrorWithQuaternions::Create(measured_pts_2D[j].x,
+                                                   measured_pts_2D[j].y,
+                                                   intrinsicMatrix(0,0),
+                                                   intrinsicMatrix(1,1),
+                                                   intrinsicMatrix(0,2),
+                                                   intrinsicMatrix(1,2));
+
+        problem.AddResidualBlock(cost_function,
+                                NULL,               // squared loss
+                                param_camera[i-1],  // camera i
+                                param_point_3D[j]); // point j
+      }
+    }
+
+
     // show info
     cout << "i:" << i
          << " --  camera: " << robot_measurement->M_cam.at(i).camera_id << endl;
@@ -315,6 +396,71 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
   // publish markers
   vis_pub.publish(marker_array);
+
+
+  for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
+  {
+    Mat_<double> kk(7,1,param_camera[i]);
+    cout << "param_camera[i]: " << kk << endl;
+
+  }
+
+  ceres::Solver::Options options;
+  options.linear_solver_type = ceres::DENSE_SCHUR;
+  options.minimizer_progress_to_stdout = true;
+//   options.minimizer_progress_to_stdout = false;
+
+  ceres::Solver::Summary summary;
+  ceres::Solve(options, &problem, &summary);
+  std::cout << summary.FullReport() << "\n";
+
+
+  cout << "\n";
+  for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
+  {
+    Mat_<double> kk(7,1,param_camera[i]);
+    cout << "param_camera[i]: " << kk << endl;
+
+  }
+
+//   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
+//   {
+//     KDL::Frame frame;
+//     double *camera = param_camera[i];
+//     frame.M.Quaternion(camera[0],
+//                        camera[1],
+//                        camera[2],
+//                        camera[3]);
+//
+//     frame.p.data[0] = camera[4];
+//     frame.p.data[1] = camera[5];
+//     frame.p.data[2] = camera[6];
+//
+//
+//     KDL::Frame current_position = frame.Inverse() * T0;
+//     current_position.M.GetQuaternion(camera[0],
+//                                      camera[1],
+//                                      camera[2],
+//                                      camera[3]);
+//
+//     camera[4] = current_position.p.x();
+//     camera[5] = current_position.p.y();
+//     camera[6] = current_position.p.z();
+//
+//     urdf::Pose pose = robot_state->getPose(frame_name[i+1]);
+//     pose.rotation.setFromQuaternion(camera[0],
+//                                     camera[1],
+//                                     camera[2],
+//                                     camera[3]);
+//     pose.position.x = camera[4];
+//     pose.position.y = camera[5];
+//     pose.position.z = camera[6];
+//     robot_state->setPose(frame_name[i+1], pose);
+//   }
+
+//   sleep(2);
+//   robot_state->updateTree();
+//   vis_pub.publish(marker_array);
 }
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
@@ -336,6 +482,7 @@ void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr
 
 int main(int argc, char **argv)
 {
+  google::InitGoogleLogging(argv[0]);
   ros::init(argc, argv, "estimation");
 
   // read urdf model from ROS param
@@ -398,3 +545,4 @@ int main(int argc, char **argv)
 //   delete robot_st_publisher;
   return 0;
 }
+
