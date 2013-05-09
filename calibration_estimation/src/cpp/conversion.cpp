@@ -140,9 +140,22 @@ void serialize(const cv::Point3d &in, double out[3])
   out[2] = in.z;
 }
 
+void serialize(const vector<cv::Point3d> &in, vector<double *> *out)
+{
+  out->clear();
+
+  for (int i = 0; i < in.size(); i++)
+  {
+    double *point = new double[3];
+    serialize(in[i], point);
+    out->push_back(point);
+  }
+}
+
 void serialize(const KDL::Rotation &R, double camera_rotation[4])
 {
-  R.GetQuaternion(camera_rotation[0], camera_rotation[1], camera_rotation[2], camera_rotation[3]);
+  R.GetQuaternion(camera_rotation[0], camera_rotation[1],
+                  camera_rotation[2], camera_rotation[3]);
 }
 
 void serialize(const KDL::Vector &translation, double camera_translation[3])
@@ -150,6 +163,38 @@ void serialize(const KDL::Vector &translation, double camera_translation[3])
   camera_translation[0] = translation.data[0];
   camera_translation[1] = translation.data[1];
   camera_translation[2] = translation.data[2];
+}
+
+void deserialize(const double in[3], cv::Point3d *out)
+{
+  out->x = in[0];
+  out->y = in[1];
+  out->z = in[2];
+}
+
+void deserialize(const std::vector<double *> &in, std::vector<cv::Point3d> *out)
+{
+  out->clear();
+
+  for (int i = 0; i < in.size(); i++)
+  {
+    Point3d point;
+    deserialize(in[i], &point);
+    out->push_back(point);
+  }
+}
+
+void deserialize(const double camera_rotation[4], KDL::Rotation *rotation)
+{
+  rotation->Quaternion(camera_rotation[0], camera_rotation[1],
+                       camera_rotation[2], camera_rotation[3]);
+}
+
+void deserialize(const double camera_translation[3], KDL::Vector *translation)
+{
+  translation->data[0] = camera_translation[0];
+  translation->data[1] = camera_translation[1];
+  translation->data[2] = camera_translation[2];
 }
 
 }

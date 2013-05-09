@@ -289,6 +289,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     //! choose one (example). TODO: delete this!
     string frame, frame2, f;
+    Mat new_pts_3D, new_pts_3D_2;
     visualization_msgs::Marker m, m2;
     if (i == 0)
     {
@@ -297,7 +298,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       f = "base_footprint";
 //       frame2 = f;
 
-      Mat new_pts_3D, new_pts_3D_2;
       transform3DPoints(Mat(board_model_pts_3D), frame, &new_pts_3D);
 
       setMarkers(i, "new",
@@ -319,27 +319,18 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
 
     //! Optimization
-
     if (i == 0)
     {
       // generate 3D points
-      for (int j=0; j < board_model_pts_3D.size(); j++)
-      {
-        double *current_point = new double[3];
-        serialize(board_model_pts_3D[i], current_point);
-
-        param_point_3D.push_back(current_point);
-      }
+      serialize(new_pts_3D, &param_point_3D);
+      vector<Point3d> test;
+      deserialize(param_point_3D, &test);
 
       // T_0 (camera '0' KDL::Frame to robot)
-      cout << "0: ";
       robot_state->getFK(current_frame, &T0);
     }
     else {
-      cout << "1: " << current_frame << ": ";
       robot_state->getFK(current_frame, &T);
-
-      cout << "2: ";
       KDL::Frame current_position = T0 * T.Inverse();
 
       // generate cameras
@@ -388,7 +379,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
   {
-    print_array(param_camera_rot[i], 4, "param_camera[i]:");
+    print_array(param_camera_rot[i], 4,   "param_camera[i]:");
     print_array(param_camera_trans[i], 3, "               :");
   }
 
@@ -405,7 +396,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   cout << "\n";
   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
   {
-    print_array(param_camera_rot[i], 4, "param_camera[i]:");
+    print_array(param_camera_rot[i],   4, "param_camera[i]:");
     print_array(param_camera_trans[i], 3, "               :");
   }
 
@@ -447,7 +438,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 //
 //   sleep(2);
 //   robot_state->updateTree();
-//   vis_pub.publish(marker_array);
+// //   vis_pub.publish(marker_array);
 }
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
