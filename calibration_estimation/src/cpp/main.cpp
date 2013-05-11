@@ -289,8 +289,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     // Calculate error
     double current_error=0;
-    int k=1;
-//     for (int k = 0; k < board_model_pts_3D.size(); k++)
+    for (int k = 0; k < board_model_pts_3D.size(); k++)
     {
       double _point3D[3];
 
@@ -311,64 +310,14 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
       Mat_<double> intrinsicMatrix = cam_model.intrinsicMatrix();
       double _proj_point2D[2];
-      double error = computeReprojectionErrors(_point3D,
-                                               _point2D,
-                                               intrinsicMatrix(0, 0),
-                                               intrinsicMatrix(1, 1),
-                                               intrinsicMatrix(0, 2),
-                                               intrinsicMatrix(1, 2),
-                                               _camera_rotation,
-                                               _camera_translation,
-                                               _proj_point2D);
-
-      PRINT(board_measured_pts_3D/*.at<double>(k)*/);
-      print_array(_point3D,3,"_point3D: ");
-
-      double rot_angles[3];
-      rot_angles[0] = rvec.at<double>(0);
-      rot_angles[1] = rvec.at<double>(1);
-      rot_angles[2] = rvec.at<double>(2);
-
-      // QuaternionRotatePoint
-      double p[3];
-      double _camera_rotation_quad[4];
-      ceres::AngleAxisToQuaternion(rot_angles, _camera_rotation_quad);
-      print_array(_camera_rotation,3,"_camera_rotation: ");
-      print_array(_camera_rotation_quad,3,"_camera_rotation_quad: ");
-
-
-      ceres::QuaternionRotatePoint(_camera_rotation_quad, _point3D, p);
-//       p[0] += _camera_translation[0];
-//       p[1] += _camera_translation[1];
-//       p[2] += _camera_translation[2];
-      print_array(p,3,"p: ");
-
-
-      // AngleAxisRotatePoint
-      double p2[3];
-      ceres::AngleAxisRotatePoint(rot_angles, _point3D, p2);
-//       p2[0] += _camera_translation[0];
-//       p2[1] += _camera_translation[1];
-//       p2[2] += _camera_translation[2];
-      print_array(p2,3,"p2: ");
-
-      KDL::Vector _kld_p;
-      deserialize(_point3D, &_kld_p);
-//       print_array(_kld_p.data,3,"_kld_p: ");
-      print_array( (_r * _kld_p ).data, 3,"(_r * _kld_p).data: ");
-//       print_array( ((_r * _kld_p) + _t).data, 3,"((_r * _kld_p) + _t).data: ");
-
-
-
-
-//       double error = calc_error(_point2D[0], _point2D[1],
-//                                 intrinsicMatrix(0, 0),
-//                                 intrinsicMatrix(1, 1),
-//                                 intrinsicMatrix(0, 2),
-//                                 intrinsicMatrix(1, 2),
-//                                 _camera_rotation,
-//                                 _camera_translation,
-//                                 _point3D);
+      double error = calc_error(_point2D[0], _point2D[1],
+                                intrinsicMatrix(0, 0),
+                                intrinsicMatrix(1, 1),
+                                intrinsicMatrix(0, 2),
+                                intrinsicMatrix(1, 2),
+                                _camera_rotation,
+                                _camera_translation,
+                                _point3D);
 
       current_error += error;
     }
