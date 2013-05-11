@@ -221,14 +221,14 @@ void deserialize(const std::vector<double *> &in, std::vector<cv::Point3d> *out)
 
 void serialize(const KDL::Rotation &R, double camera_rotation[4])
 {
-  R.GetQuaternion(camera_rotation[0], camera_rotation[1],
-                  camera_rotation[2], camera_rotation[3]);
+  R.GetQuaternion(camera_rotation[1], camera_rotation[2],
+                  camera_rotation[3], camera_rotation[0]);
 }
 
 void deserialize(const double camera_rotation[4], KDL::Rotation *rotation)
 {
-  *rotation = KDL::Rotation::Quaternion(camera_rotation[0], camera_rotation[1],
-                                        camera_rotation[2], camera_rotation[3]);
+  *rotation = KDL::Rotation::Quaternion(camera_rotation[1], camera_rotation[2],
+                                        camera_rotation[3], camera_rotation[0]);
 }
 
 void serialize(const KDL::Vector &translation, double camera_translation[3])
