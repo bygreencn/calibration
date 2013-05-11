@@ -52,24 +52,42 @@ void ros2cv(const std::vector<geometry_msgs::Point> &pts_ros, cv::Mat_<double> *
 /// \brief Conversion functions: convert OpenCV to ROS points
 void cv2ros(const cv::Mat &pt_cv, std::vector<geometry_msgs::Point> *pt_ros);
 
-/// KDL to OpenCV
+/// KDL <-> OpenCV
 void kdl2cv(const KDL::Frame    &frame,       cv::OutputArray R, cv::OutputArray t);
 void kdl2cv(const KDL::Rotation &rotation,    cv::OutputArray R);
 void kdl2cv(const KDL::Vector   &translation, cv::OutputArray t);
+void cv2kdl(const cv::InputArray R, KDL::Rotation *rotation);
+void cv2kdl(const cv::InputArray t, KDL::Vector   *translation);
 
-/// Serialization
-void serialize(const cv::Point3d &in, double out[3]);
-void serialize(const std::vector<cv::Point3d> &in, std::vector<double *> *out);
 
-void serialize(const KDL::Rotation &rotation,    double camera_rotation[4]);
-void serialize(const KDL::Vector   &translation, double camera_translation[3]);
+/// Serialization & Deserialization
+// Point3d <-> double[3]
+void   serialize(const cv::Point3d &in, double out[3]);
+void deserialize(const double   out[3], cv::Point3d *in);
 
-/// Deserialization
-void deserialize(const double out[3], cv::Point3d *in);
-void deserialize(const std::vector<double *> &out, std::vector<cv::Point3d> *in);
+// Point2d <-> double[2]
+void   serialize(const cv::Point2d &in, double out[2]);
+void deserialize(const double   out[2], cv::Point2d *in);
 
+// vector<Point3d> <-> vector<double*>
+void   serialize(const std::vector<cv::Point3d> &in, std::vector<double *> *out);
+void deserialize(const std::vector<double *>   &out, std::vector<cv::Point3d> *in);
+
+// KDL::Rotation <-> double[4] (quaternions)
+void   serialize(const KDL::Rotation   &rotation, double camera_rotation[4]);
 void deserialize(const double camera_rotation[4], KDL::Rotation *rotation);
+
+// KDL::Vector <-> double[3]
+void   serialize(const KDL::Vector     &translation, double camera_translation[3]);
 void deserialize(const double camera_translation[3], KDL::Vector *translation);
+
+
+void deserialize(const double    camera_rotation[4], cv::Matx33d *R);
+void deserialize(const double camera_translation[3], cv::Vec3d   *tvec);
+
+// intrinsicMatrix <-> double[4]
+void   serializeIntrinsics(const cv::Mat_<double> &intrinsicMatrix, double K[4]);
+void deserializeIntrinsics(const double K[4], cv::Mat_<double> *intrinsicMatrix);
 
 }
 

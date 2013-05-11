@@ -36,6 +36,8 @@
 
 #include "conversion.h"
 #include <ros/assert.h>
+#include <opencv2/calib3d/calib3d.hpp>
+#include "auxiliar.h"
 
 using namespace std;
 using namespace cv;
@@ -133,11 +135,64 @@ void kdl2cv(const KDL::Vector &translation, cv::OutputArray _t)
   Mat(t).copyTo(_t);
 }
 
+void cv2kdl(const cv::InputArray _R, KDL::Rotation *rotation)
+{
+  // get rotation
+  Mat_<double> rvec = _R.getMat();
+
+  Mat_<double> R;
+  if ((rvec.rows == 3 && rvec.cols == 1) || (rvec.rows == 1 && rvec.cols == 3))
+  {
+    cv::Rodrigues(rvec, R);
+  }
+  else if (rvec.rows == 3 && rvec.cols == 3)
+  {
+    rvec.copyTo(R);
+  }
+
+  (*rotation)(0, 0) = R(0, 0);
+  (*rotation)(0, 1) = R(0, 1);
+  (*rotation)(0, 2) = R(0, 2);
+  (*rotation)(1, 0) = R(1, 0);
+  (*rotation)(1, 1) = R(1, 1);
+  (*rotation)(1, 2) = R(1, 2);
+  (*rotation)(2, 0) = R(2, 0);
+  (*rotation)(2, 1) = R(2, 1);
+  (*rotation)(2, 2) = R(2, 2);
+}
+
+void cv2kdl(const cv::InputArray _t, KDL::Vector *translation)
+{
+  Point3d t(_t.getMat());
+  translation->data[0] = t.x;
+  translation->data[1] = t.y;
+  translation->data[2] = t.z;
+}
+
 void serialize(const cv::Point3d &in, double out[3])
 {
   out[0] = in.x;
   out[1] = in.y;
   out[2] = in.z;
+}
+
+void deserialize(const double in[3], cv::Point3d *out)
+{
+  out->x = in[0];
+  out->y = in[1];
+  out->z = in[2];
+}
+
+void serialize(const cv::Point2d &in, double out[2])
+{
+  out[0] = in.x;
+  out[1] = in.y;
+}
+
+void deserialize(const double in[2], cv::Point2d *out)
+{
+  out->x = in[0];
+  out->y = in[1];
 }
 
 void serialize(const vector<cv::Point3d> &in, vector<double *> *out)
@@ -152,26 +207,6 @@ void serialize(const vector<cv::Point3d> &in, vector<double *> *out)
   }
 }
 
-void serialize(const KDL::Rotation &R, double camera_rotation[4])
-{
-  R.GetQuaternion(camera_rotation[0], camera_rotation[1],
-                  camera_rotation[2], camera_rotation[3]);
-}
-
-void serialize(const KDL::Vector &translation, double camera_translation[3])
-{
-  camera_translation[0] = translation.data[0];
-  camera_translation[1] = translation.data[1];
-  camera_translation[2] = translation.data[2];
-}
-
-void deserialize(const double in[3], cv::Point3d *out)
-{
-  out->x = in[0];
-  out->y = in[1];
-  out->z = in[2];
-}
-
 void deserialize(const std::vector<double *> &in, std::vector<cv::Point3d> *out)
 {
   out->clear();
@@ -184,10 +219,23 @@ void deserialize(const std::vector<double *> &in, std::vector<cv::Point3d> *out)
   }
 }
 
+void serialize(const KDL::Rotation &R, double camera_rotation[4])
+{
+  R.GetQuaternion(camera_rotation[0], camera_rotation[1],
+                  camera_rotation[2], camera_rotation[3]);
+}
+
 void deserialize(const double camera_rotation[4], KDL::Rotation *rotation)
 {
-  rotation->Quaternion(camera_rotation[0], camera_rotation[1],
-                       camera_rotation[2], camera_rotation[3]);
+  *rotation = KDL::Rotation::Quaternion(camera_rotation[0], camera_rotation[1],
+                                        camera_rotation[2], camera_rotation[3]);
+}
+
+void serialize(const KDL::Vector &translation, double camera_translation[3])
+{
+  camera_translation[0] = translation.data[0];
+  camera_translation[1] = translation.data[1];
+  camera_translation[2] = translation.data[2];
 }
 
 void deserialize(const double camera_translation[3], KDL::Vector *translation)
@@ -196,5 +244,40 @@ void deserialize(const double camera_translation[3], KDL::Vector *translation)
   translation->data[1] = camera_translation[1];
   translation->data[2] = camera_translation[2];
 }
+
+void deserialize(const double camera_rotation[4], cv::Matx33d *_R)
+{
+  // deserialize to KDL (quaternions)
+  KDL::Rotation rotation;
+  deserialize(camera_rotation, &rotation);
+
+  // From KDL to OpenCV
+  kdl2cv(rotation, *_R);
+}
+
+void deserialize(const double camera_translation[3], cv::Vec3d *tvec)
+{
+  (*tvec)(0) = camera_translation[0];
+  (*tvec)(1) = camera_translation[1];
+  (*tvec)(2) = camera_translation[2];
+}
+
+
+void serializeIntrinsics(const cv::Mat_<double> &intrinsicMatrix, double K[4])
+{
+  K[0] = intrinsicMatrix(0, 0);
+  K[1] = intrinsicMatrix(1, 1);
+  K[2] = intrinsicMatrix(0, 2);
+  K[3] = intrinsicMatrix(1, 2);
+}
+
+void deserializeIntrinsics(const double K[4], cv::Mat_<double> *intrinsicMatrix)
+{
+  (*intrinsicMatrix)(0, 0) = K[0];
+  (*intrinsicMatrix)(1, 1) = K[1];
+  (*intrinsicMatrix)(0, 2) = K[2];
+  (*intrinsicMatrix)(1, 2) = K[3];
+}
+
 
 }
