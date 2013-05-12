@@ -60,6 +60,13 @@ RobotStatePublisher::~RobotStatePublisher()
 {
 }
 
+void RobotStatePublisher::updateTree()
+{
+  timer_.stop();
+  RobotState::updateTree();
+  timer_.start();
+}
+
 bool RobotStatePublisher::update(const string &joint_name,
                                  const double &position)
 {
@@ -104,18 +111,9 @@ void RobotStatePublisher::publishTransforms(const ros::TimerEvent &e)
     KDL::Frame pose;
     const string &link_name = getLinkName(jnt->first);
 
-    if (getJointType(jnt->first) == KDL::Joint::None)
-    {
-      // fixed Transforms
-      tf_transform.stamp_ = delay;  // future publish by 0.5 seconds
-      getRelativePose(link_name, 0, &pose);
-    }
-    else
-    {
-      // moving transforms
-      tf_transform.stamp_ = now;
-      getRelativePose(link_name, jnt->second, &pose);
-    }
+    // moving transforms
+    tf_transform.stamp_ = now;
+    getRelativePose(link_name, jnt->second, &pose);
 
     // convert KDL::Frame to tf::Transform
     tf::transformKDLToTF(pose, tf_transform);

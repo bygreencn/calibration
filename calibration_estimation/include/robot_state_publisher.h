@@ -44,12 +44,19 @@
 namespace calib
 {
 
-
+/** RobotStatePublisher
+*
+* This class is a wrapper of RobotState publisher.
+* It adds the timer and tf broadcaster
+*
+*/
 class RobotStatePublisher : public RobotState
 {
 public:
   RobotStatePublisher();
   ~RobotStatePublisher();
+
+  void updateTree();
 
   bool update(const std::string &joint_name,
               const double      &position);
