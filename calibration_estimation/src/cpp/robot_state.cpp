@@ -180,6 +180,18 @@ void RobotState::getPoses(PosesType *poses) const
   }
 }
 
+urdf::Pose RobotState::getUrdfPose(const std::string &link_name)
+{
+  std::string jnt = getJointName(link_name);
+  return urdf_model_.joints_[jnt]->parent_to_joint_origin_transform;
+}
+
+void RobotState::setUrdfPose(const std::string &link_name, const urdf::Pose &pose)
+{
+  std::string jnt = getJointName(link_name);
+  urdf_model_.joints_[jnt]->parent_to_joint_origin_transform = pose;
+}
+
 string RobotState::getLinkRoot(const string &link_name) const
 {
   const urdf::Link *link = urdf_model_.getLink(link_name).get();

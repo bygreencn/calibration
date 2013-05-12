@@ -78,8 +78,8 @@ public:
   /// \brief get poses
   void getPoses(PosesType *poses) const;
 
-  /// \brief Get Forward Kinematic (recurvise), similar to getPose but the pose
-  /// |will be in the root frame.
+  /// \brief Get Forward Kinematic (recurvise), similar to getRelativePose but
+  /// the pose will be in the root frame ('base_footprint').
   bool getFK(const std::string &link_name, KDL::Frame *pose);
 
   /// \brief Get link root (it is not the tree root)
@@ -98,18 +98,10 @@ public:
   void clear();
 
   /// \brief Get URDF Pose for a given link/frame
-  urdf::Pose getPose(const std::string &link_name)
-  {
-    std::string jnt = getJointName(link_name);
-    return urdf_model_.joints_[jnt]->parent_to_joint_origin_transform;
-  }
+  urdf::Pose getUrdfPose(const std::string &link_name);
 
   /// \brief Set URDF Pose
-  void setPose(const std::string &link_name, const urdf::Pose &pose)
-  {
-    std::string jnt = getJointName(link_name);
-    urdf_model_.joints_[jnt]->parent_to_joint_origin_transform = pose;
-  }
+  void setUrdfPose(const std::string &link_name, const urdf::Pose &pose);
 
   /// \brief Update KDL tree from URDF
   void updateTree();
