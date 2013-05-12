@@ -246,7 +246,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   vector<double *> param_camera_rot;
   vector<double *> param_camera_trans;
 
-  vector<KDL::Frame> cb2camera, corrected;
+  vector<KDL::Frame> cb2camera, corrected, pose_rel, pose_father;
   Mat rvec0, tvec0;
 
   KDL::Frame T, T0;
@@ -386,6 +386,18 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       current_frame = "head_mount_kinect_rgb_optical_frame";
     else
       current_frame = cam_model.tfFrame();
+
+    // get relative pose (camera to its father)
+    KDL::Frame pose;
+    robot_state->getRelativePose(current_frame, &pose);
+    pose_rel.push_back(pose);
+    const string link_root = robot_state->getLinkRoot(current_frame);
+
+    // get father pose (father to tree root)
+    KDL::Frame pose_f;
+    robot_state->getFK(link_root, &pose_f);
+    pose_father.push_back(pose_f);
+//     pose = pose_f * pose;
 
     frame_name.push_back(current_frame);
     setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
@@ -582,22 +594,34 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 // //   vis_pub.publish(marker_array);
 */
 
-  int i=1;
-//   for( int i=1; i<corrected.size(); i++)
+//   Mat rot;
+//   kdl2cv(T0.M, rot);
+//   PRINT(rot);
+//
+//   kdl2cv((pose_father[0] * pose_rel[0]).M, rot);
+//   PRINT(rot);
+
+//   int i=1;
+  for( int i=1; i<corrected.size(); i++)
   {
 //     PRINT(frame_name.at(i))
+    KDL::Frame R = (pose_father[i] * pose_rel[i]).Inverse() * T0;
+
+    KDL::Frame new_rel;
+    new_rel = pose_father[i].Inverse() * T0 * corrected[i];// R.Inverse();
+
     urdf::Pose pose = robot_state->getUrdfPose(frame_name.at(i));
-    KDL::Frame fr = corrected.at(i);
+    KDL::Frame fr = new_rel;
     double x,y,z,w;
     fr.M.GetQuaternion(x,y,z,w);
-    pose.rotation.x = x;    /// pose es relativo to its father!!
+    pose.rotation.x = x;
     pose.rotation.y = y;
     pose.rotation.z = z;
     pose.rotation.w = w;
     pose.position.x = fr.p.x();
     pose.position.y = fr.p.y();
     pose.position.z = fr.p.z();
-    pose.rotation.normalize();
+//     pose.rotation.normalize();
     robot_state->setUrdfPose(frame_name.at(i), pose);
   }
   sleep(1);
