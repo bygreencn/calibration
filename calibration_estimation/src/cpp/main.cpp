@@ -246,6 +246,9 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   vector<double *> param_camera_rot;
   vector<double *> param_camera_trans;
 
+  vector<KDL::Frame> cb2camera, corrected;
+  Mat rvec0, tvec0;
+
   KDL::Frame T, T0;
   vector<string> frame_name;
   Mat board_pts_frame0, board_pts_frame1;
@@ -283,30 +286,41 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
                                     cam_model.intrinsicMatrix(),
                                     D, rvec, tvec, expected_pts_2D);
 
+    KDL::Frame current_cb2camera;
+    cv2kdl(rvec, tvec, &current_cb2camera);
+    cb2camera.push_back(current_cb2camera);
+
     // board_measured_pts
     Mat board_measured_pts_3D, board_measured_pts_3D_tmp;
     transform3DPoints(Mat(board_model_pts_3D), rvec, tvec, &board_measured_pts_3D);
     if (i == 0)
     {
       board_measured_pts_3D.copyTo(board_pts_frame0);
+      rvec.copyTo(rvec0);
+      tvec.copyTo(tvec0);
+      corrected.push_back(current_cb2camera);
     }
-
-    if(i==1)
+    else
     {
-      // reprojection error
-      Mat D;
-      Mat R = Mat::eye(3, 3, CV_64F);
-      Mat rvec;
-      Rodrigues(R,rvec);
-      Mat tvec = Mat::zeros(3,1,CV_64F);
-      double err = computeReprojectionErrors(board_pts_frame1, measured_pts_2D,
-                                             cam_model.intrinsicMatrix(),
-                                             D, rvec, tvec, expected_pts_2D);
-      cout << "board_pts_frame1 error = " << err << endl;
-
-//       PRINT(measured_pts_2D)
-//       PRINT(expected_pts_2D)
+      corrected.push_back( corrected.at(0) * current_cb2camera.Inverse() );
     }
+
+//     if(i==1)
+//     {
+//       // reprojection error
+//       Mat D;
+//       Mat R = Mat::eye(3, 3, CV_64F);
+//       Mat rvec;
+//       Rodrigues(R,rvec);
+//       Mat tvec = Mat::zeros(3,1,CV_64F);
+//       double err = computeReprojectionErrors(board_pts_frame1, measured_pts_2D,
+//                                              cam_model.intrinsicMatrix(),
+//                                              D, rvec, tvec, expected_pts_2D);
+//       cout << "board_pts_frame1 error = " << err << endl;
+//
+// //       PRINT(measured_pts_2D)
+// //       PRINT(expected_pts_2D)
+//     }
 
 
     // Calculate error
@@ -360,10 +374,14 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     string current_frame;
 
     // TODO: some frame are hard code here. Is it a possible error in the bag?
-    if( robot_measurement->M_cam.at(i).camera_id == "narrow_right_rect" )
+    if( robot_measurement->M_cam.at(i).camera_id == "narrow_left_rect" )
+      current_frame = "narrow_stereo_l_stereo_camera_optical_frame";
+    else if( robot_measurement->M_cam.at(i).camera_id == "narrow_right_rect" )
       current_frame = "narrow_stereo_r_stereo_camera_optical_frame";
+    else if( robot_measurement->M_cam.at(i).camera_id == "wide_left_rect" )
+      current_frame = "wide_stereo_l_stereo_camera_optical_frame";
     else if( robot_measurement->M_cam.at(i).camera_id == "wide_right_rect" )
-      current_frame = "narrow_stereo_r_stereo_camera_optical_frame";
+      current_frame = "wide_stereo_r_stereo_camera_optical_frame";
     else if( cam_model.tfFrame() == "/head_mount_kinect_rgb_optical_frame" )
       current_frame = "head_mount_kinect_rgb_optical_frame";
     else
@@ -381,9 +399,8 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
     //! choose one (example). TODO: delete this!
     string frame0, frame1, f;
-    Mat new_pts_3D;
     visualization_msgs::Marker m, m2;
-    if (i == 0)
+    if (i == 1)
     {
       frame0  = "narrow_stereo_optical_frame"; //cam_model.tfFrame();
       frame1 = "wide_stereo_optical_frame";
@@ -395,15 +412,21 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
       // T
       robot_state->getFK(frame1, &T);
-      transform3DPoints(board_pts_frame0, T0, &new_pts_3D);  // in the robot
-      transform3DPoints(board_pts_frame0, T.Inverse() * T0, &board_pts_frame1); // in the frame1
+      KDL::Frame R, R_prime, E;
+      R = T.Inverse() * T0;
+      transform3DPoints(board_pts_frame0, R, &board_pts_frame1); // in the frame1
+
+      Mat board_pts_frame1_using_correction;
+      R_prime = corrected.at(1) * corrected.at(0).Inverse();   // corrected fram1
+      E = R_prime * R.Inverse();                               // frame error
+      transform3DPoints(board_pts_frame0,
+                        E.Inverse() * R_prime, &board_pts_frame1_using_correction);
 
       setMarkers(i, "new",
-                    f, &m,
+                    frame1, &m,
                     colors[i+1]);
-      points2markers(new_pts_3D, &m);
+      points2markers(board_pts_frame1_using_correction, &m);
       marker_array.markers.push_back(m);
-
 
 //       transform3DPoints(new_pts_3D, frame, frame2, &new_pts_3D_2);
 
@@ -558,6 +581,28 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 //   robot_state->updateTree();
 // //   vis_pub.publish(marker_array);
 */
+
+  int i=1;
+//   for( int i=1; i<corrected.size(); i++)
+  {
+//     PRINT(frame_name.at(i))
+    urdf::Pose pose = robot_state->getUrdfPose(frame_name.at(i));
+    KDL::Frame fr = corrected.at(i);
+    double x,y,z,w;
+    fr.M.GetQuaternion(x,y,z,w);
+    pose.rotation.x = x;    /// pose es relativo to its father!!
+    pose.rotation.y = y;
+    pose.rotation.z = z;
+    pose.rotation.w = w;
+    pose.position.x = fr.p.x();
+    pose.position.y = fr.p.y();
+    pose.position.z = fr.p.z();
+    pose.rotation.normalize();
+    robot_state->setUrdfPose(frame_name.at(i), pose);
+  }
+  sleep(1);
+  robot_state->updateTree();
+//   vis_pub.publish(marker_array);
 }
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
