@@ -56,6 +56,7 @@ void cv2ros(const cv::Mat &pt_cv, std::vector<geometry_msgs::Point> *pt_ros);
 void kdl2cv(const KDL::Frame    &frame,       cv::OutputArray R, cv::OutputArray t);
 void kdl2cv(const KDL::Rotation &rotation,    cv::OutputArray R);
 void kdl2cv(const KDL::Vector   &translation, cv::OutputArray t);
+void cv2kdl(const cv::InputArray R, const cv::InputArray t, KDL::Frame *frame);
 void cv2kdl(const cv::InputArray R, KDL::Rotation *rotation);
 void cv2kdl(const cv::InputArray t, KDL::Vector   *translation);
 

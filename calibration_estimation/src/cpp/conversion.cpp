@@ -135,6 +135,12 @@ void kdl2cv(const KDL::Vector &translation, cv::OutputArray _t)
   Mat(t).copyTo(_t);
 }
 
+void cv2kdl(const cv::InputArray R, const cv::InputArray t, KDL::Frame *frame)
+{
+  cv2kdl(R, &(frame->M));
+  cv2kdl(t, &(frame->p));
+}
+
 void cv2kdl(const cv::InputArray _R, KDL::Rotation *rotation)
 {
   // get rotation
