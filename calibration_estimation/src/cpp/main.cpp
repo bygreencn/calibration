@@ -248,6 +248,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
   KDL::Frame T, T0;
   vector<string> frame_name;
+  Mat board_pts_frame0, board_pts_frame1;
 
   // read image points
   size_t size = robot_measurement->M_cam.size();
@@ -285,6 +286,27 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     // board_measured_pts
     Mat board_measured_pts_3D, board_measured_pts_3D_tmp;
     transform3DPoints(Mat(board_model_pts_3D), rvec, tvec, &board_measured_pts_3D);
+    if (i == 0)
+    {
+      board_measured_pts_3D.copyTo(board_pts_frame0);
+    }
+
+    if(i==1)
+    {
+      // reprojection error
+      Mat D;
+      Mat R = Mat::eye(3, 3, CV_64F);
+      Mat rvec;
+      Rodrigues(R,rvec);
+      Mat tvec = Mat::zeros(3,1,CV_64F);
+      double err = computeReprojectionErrors(board_pts_frame1, measured_pts_2D,
+                                             cam_model.intrinsicMatrix(),
+                                             D, rvec, tvec, expected_pts_2D);
+      cout << "board_pts_frame1 error = " << err << endl;
+
+//       PRINT(measured_pts_2D)
+//       PRINT(expected_pts_2D)
+    }
 
 
     // Calculate error
@@ -358,17 +380,23 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
 
     //! choose one (example). TODO: delete this!
-    string frame, frame2, f;
-    Mat new_pts_3D, new_pts_3D_2;
+    string frame0, frame1, f;
+    Mat new_pts_3D;
     visualization_msgs::Marker m, m2;
     if (i == 0)
     {
-      frame  = "narrow_stereo_optical_frame"; //cam_model.tfFrame();
-      frame2 = "wide_stereo_optical_frame";
+      frame0  = "narrow_stereo_optical_frame"; //cam_model.tfFrame();
+      frame1 = "wide_stereo_optical_frame";
       f = "base_footprint";
-//       frame2 = f;
 
-      transform3DPoints(Mat(board_model_pts_3D), frame, &new_pts_3D);
+      // T_0 (camera '0' KDL::Frame to robot)
+      robot_state->getFK(frame0, &T0);
+//       transform3DPoints(board_pts_frame0, T0, &new_pts_3D);
+
+      // T
+      robot_state->getFK(frame1, &T);
+      transform3DPoints(board_pts_frame0, T0, &new_pts_3D);  // in the robot
+      transform3DPoints(board_pts_frame0, T.Inverse() * T0, &board_pts_frame1); // in the frame1
 
       setMarkers(i, "new",
                     f, &m,
@@ -377,23 +405,21 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       marker_array.markers.push_back(m);
 
 
-      cv::Mat rvec, tvec;
-      transform3DPoints(new_pts_3D, frame, frame2, &new_pts_3D_2);
+//       transform3DPoints(new_pts_3D, frame, frame2, &new_pts_3D_2);
 
       setMarkers(i, "new2",
-                    f, &m2,
+                    frame1, &m2,
                     colors[i+2]);
-      points2markers(new_pts_3D_2, &m2);
+      points2markers(board_pts_frame1, &m2);
       marker_array.markers.push_back(m2);
     }
-
 
 /*
     //! Optimization
     if (i == 0)
     {
       // generate 3D points
-      serialize(new_pts_3D, &param_point_3D);
+      serialize(board_pts_frame0, &param_point_3D);
       vector<Point3d> test;
       deserialize(param_point_3D, &test);
 
@@ -402,7 +428,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     }
     else {
       robot_state->getFK(current_frame, &T);
-      KDL::Frame current_position = T0 * T.Inverse();
+      KDL::Frame current_position = T.Inverse() * T0;
 
       // generate cameras
       double *camera_rot = new double[4];
@@ -431,7 +457,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
         double p[2], proj_p[2];
         p[0] = measured_pts_2D[j].x;
         p[1] = measured_pts_2D[j].y;
-        double current_error = computeReprojectionErrors(param_point_3D[j],
+        current_error = computeReprojectionErrors(param_point_3D[j],
                                            p,
                                            intrinsicMatrix(0,0),
                                            intrinsicMatrix(1,1),
@@ -441,7 +467,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
                                            param_camera_trans[i-1],
                                            proj_p);
 
-        PRINT(current_error);
+//         PRINT(current_error);
         error += current_error;
 
 
@@ -453,7 +479,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
                                 param_point_3D[j]);         // point j
       }
       PRINT(error)
-
     }
 */
 
