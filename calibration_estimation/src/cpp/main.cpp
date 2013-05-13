@@ -39,6 +39,9 @@
  */
 
 #include <ros/ros.h>
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+#include <boost/foreach.hpp>
 #include <std_msgs/String.h>
 #include <kdl_parser/kdl_parser.hpp>
 #include <visualization_msgs/Marker.h>
@@ -358,7 +361,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       current_error += error;
     }
     PRINT(current_error);
-
+    cout << "Aveg. error: " << current_error/board_model_pts_3D.size() << endl;
 
 
     // TODO: Same frame!!
@@ -614,7 +617,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     KDL::Frame fr = new_rel;
     double x,y,z,w;
     fr.M.GetQuaternion(x,y,z,w);
-    pose.rotation.x = x;
+    pose.rotation.x = x;    /// pose es relativo to its father!!
     pose.rotation.y = y;
     pose.rotation.z = z;
     pose.rotation.w = w;
@@ -626,7 +629,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   }
   sleep(1);
   robot_state->updateTree();
-//   vis_pub.publish(marker_array);
 }
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
@@ -663,35 +665,6 @@ int main(int argc, char **argv)
 //   else
 //     output->SaveFile("urdf_calibrated.xml");
 
-
-  // create a KDL tree from Urdf Model
-//   KDL::Tree kdl_tree;
-//   if (!kdl_parser::treeFromUrdfModel(model, kdl_tree))
-//   {
-//     ROS_ERROR("Failed to construct kdl tree from urdf");
-//     return EXIT_FAILURE;
-//   }
-
-//   const urdf::Link *root = model.getRoot().get();
-//   cout << "Link name: " << root->name << endl;// << " - Joint name: " << root->parent_joint.get()->name << endl;
-//
-//   PRINT(root->child_links.size(),"\n");
-//
-//   const urdf::Link *base_link = model.links_["base_link"].get();
-//   cout << "Link name: " << base_link->name << " - Joint name: " << base_link->parent_joint.get()->name << endl;
-//   PRINT(base_link->child_links.size(),"\n");
-//   for (int i=0; i<base_link->child_links.size(); i++)
-//   {
-// //     PRINT(base_link->child_links.at(i).get()->name);
-//     PRINT(base_link->child_links.at(i).get()->parent_joint->name,": ")
-//        << base_link->child_joints.at(i).get()->name << "\n";
-// //     ->getParent().get()->parent_joint.get()->name);
-//   }
-
-  // robot state publisher
-//   if (!robot_st_publisher)
-//     robot_st_publisher = new robot_state_publisher::RobotStatePublisher(kdl_tree);
-
   // robot init
   robot_state = new RobotStatePublisher();
   robot_state->initFromURDF(model);
@@ -706,9 +679,29 @@ int main(int argc, char **argv)
   // visualization marker publisher
   vis_pub = n.advertise<visualization_msgs::MarkerArray>( "visualization_marker_array", 0 );
 
+
+  // read bag filename from param
+  string rosbag_filename;
+  if (!n.getParam("cal_measurements", rosbag_filename))
+  {
+    ROS_ERROR("Could read parameter cal_measurements on parameter server");
+    return false;
+  }
+
+  // read rosbag
+  rosbag::Bag bag(rosbag_filename);
+  rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
+  vector<calibration_msgs::RobotMeasurement::ConstPtr> cal_msgs;
+  BOOST_FOREACH(rosbag::MessageInstance const m, view)
+  {
+    calibration_msgs::RobotMeasurement::ConstPtr i = m.instantiate<calibration_msgs::RobotMeasurement>();
+    if (i != NULL)
+      cal_msgs.push_back(i);
+  }
+  bag.close();
+
   ros::spin();
 
 //   delete robot_st_publisher;
   return 0;
 }
-
