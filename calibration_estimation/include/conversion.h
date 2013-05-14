@@ -40,6 +40,7 @@
 #include <geometry_msgs/Point.h>
 #include <opencv2/core/core.hpp>
 #include <kdl/frames.hpp>
+#include <urdf_model/pose.h>
 
 namespace calib
 {
@@ -59,6 +60,9 @@ void kdl2cv(const KDL::Vector   &translation, cv::OutputArray t);
 void cv2kdl(const cv::InputArray R, const cv::InputArray t, KDL::Frame *frame);
 void cv2kdl(const cv::InputArray R, KDL::Rotation *rotation);
 void cv2kdl(const cv::InputArray t, KDL::Vector   *translation);
+
+/// KDL <-> URDF
+void kdl2urdf(const KDL::Frame &frame, urdf::Pose *pose);
 
 
 /// Serialization & Deserialization

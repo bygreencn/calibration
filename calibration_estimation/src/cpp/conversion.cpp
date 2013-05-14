@@ -175,6 +175,20 @@ void cv2kdl(const cv::InputArray _t, KDL::Vector *translation)
   translation->data[2] = t.z;
 }
 
+void kdl2urdf(const KDL::Frame &frame, urdf::Pose *pose)
+{
+  // rotation
+  frame.M.GetQuaternion(pose->rotation.x,
+                        pose->rotation.y,
+                        pose->rotation.z,
+                        pose->rotation.w);
+
+  // translation
+  pose->position.x = frame.p.x();
+  pose->position.y = frame.p.y();
+  pose->position.z = frame.p.z();
+}
+
 void serialize(const cv::Point3d &in, double out[3])
 {
   out[0] = in.x;

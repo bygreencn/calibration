@@ -64,12 +64,12 @@ double computeReprojectionErrors(cv::InputArray points3D,
                                  cv::OutputArray proj_points2D =cv::noArray());
 
 /// \brief Calculate reprojection error
-double computeReprojectionErrors(double points3D[3],
-                                 double points2D[2],
-                                 double fx, double fy, // intrinsics
-                                 double cx, double cy, // intrinsics
-                                 double camera_rotation[4],
-                                 double camera_translation[3],
+double computeReprojectionErrors(const double points3D[3],
+                                 const double points2D[2],
+                                 const double fx, const double fy, // intrinsics
+                                 const double cx, const double cy, // intrinsics
+                                 const double camera_rotation[4],
+                                 const double camera_translation[3],
                                  double proj_points2D[2] =0);
 
 

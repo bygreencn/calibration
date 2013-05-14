@@ -114,12 +114,12 @@ double computeReprojectionErrors(InputArray points3D,
   return _norm(x, proj_points2D);
 }
 
-double computeReprojectionErrors(double _point3D[3],
-                                 double _point2D[2],
-                                 double fx,  double fy, // intrinsics
-                                 double cx,  double cy, // intrinsics
-                                 double _camera_rotation[4],
-                                 double _camera_translation[3],
+double computeReprojectionErrors(const double _point3D[3],
+                                 const double _point2D[2],
+                                 const double fx, const double fy, // intrinsics
+                                 const double cx, const double cy, // intrinsics
+                                 const double _camera_rotation[4],
+                                 const double _camera_translation[3],
                                  double _proj_point2D[2])
 {
   Point3d point3D(_point3D[0], _point3D[1], _point3D[2]);

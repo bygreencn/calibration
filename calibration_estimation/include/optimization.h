@@ -43,10 +43,12 @@
 
 #include <opencv2/core/mat.hpp>
 
+#include "projection.h"
+
 namespace calib
 {
 
-struct ReprojectionErrorWithQuaternions {
+  struct ReprojectionErrorWithQuaternions {
   ReprojectionErrorWithQuaternions(double observed_x, double observed_y,
                                    double fx, double fy, double cx, double cy)
     : observed_x(observed_x), observed_y(observed_y),
@@ -98,6 +100,80 @@ struct ReprojectionErrorWithQuaternions {
   double fy;
   double cx;
   double cy;
+};
+
+
+struct ReprojectionErrorWithQuaternions2 {
+  ReprojectionErrorWithQuaternions2(double observed_x, double observed_y,
+                                   double fx, double fy, double cx, double cy, double *_point)
+    : observed_x(observed_x), observed_y(observed_y),
+      fx(fx), fy(fy), cx(cx), cy(cy) {
+        point[0] = _point[0];
+        point[1] = _point[1];
+        point[2] = _point[2];
+      }
+
+//   template <typename double>
+  bool operator()(const double* camera_rotation,
+                  const double* camera_translation,
+                  double *residuals) const
+  {
+//     double p[2];
+//     double proj_p[2];
+//
+//     p[0] = observed_x;
+//     p[1] = observed_y;
+//     double current_error = computeReprojectionErrors(point, p,
+//                                            fx, fy, cx, cy,
+//                                            camera_rotation,
+//                                            camera_translation,
+//                                            proj_p);
+//
+//     residuals[0] = proj_p[0] - double(observed_x);
+//     residuals[1] = proj_p[1] - double(observed_y);
+
+    // camera_rotation are the quaternions
+    double p[3];
+    ceres::QuaternionRotatePoint(camera_rotation, point, p);
+
+    // camera_translation is the translation
+    p[0] += camera_translation[0];
+    p[1] += camera_translation[1];
+    p[2] += camera_translation[2];
+
+    // Compute the projection
+    double xp = p[0] / p[2];
+    double yp = p[1] / p[2];
+    double predicted_x = double(fx) * xp + double(cx);
+    double predicted_y = double(fy) * yp + double(cy);
+
+    // The error is the difference between the predicted and observed position.
+    residuals[0] = predicted_x - double(observed_x);
+    residuals[1] = predicted_y - double(observed_y);
+
+    return true;
+  }
+
+  // Factory to hide the construction of the CostFunction object from
+  // the client code.
+  static ceres::CostFunction* Create(const double observed_x,
+                                     const double observed_y,
+                                     const double fx,
+                                     const double fy,
+                                     const double cx,
+                                     const double cy,
+                                     double *point) {
+    return (new ceres::NumericDiffCostFunction<ReprojectionErrorWithQuaternions2, ceres::CENTRAL, 2, 4, 3>(
+                new ReprojectionErrorWithQuaternions2(observed_x, observed_y, fx, fy, cx, cy, point)));
+  }
+
+  double observed_x;
+  double observed_y;
+  double fx;
+  double fy;
+  double cx;
+  double cy;
+  double point[3];
 };
 
 

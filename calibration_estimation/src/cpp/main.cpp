@@ -452,7 +452,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       marker_array.markers.push_back(m2);
     }
 
-/*
+
     //! Optimization
     if (i == 0)
     {
@@ -466,7 +466,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     }
     else {
       robot_state->getFK(current_frame, &T);
-      KDL::Frame current_position = T.Inverse() * T0;
+      KDL::Frame current_position = (pose_father[i]*pose_rel[i]).Inverse() * T0;
 
       // generate cameras
       double *camera_rot = new double[4];
@@ -477,7 +477,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       serialize(current_position.p, camera_trans);
       param_camera_trans.push_back(camera_trans);
 
-      double error = 0;
+//       double error = 0;
 
       Matx33d intrinsicMatrix = cam_model.intrinsicMatrix();
       // feed optimazer with data
@@ -485,40 +485,42 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
       for (int j = 0; j < measured_pts_2D.size(); j++)
       {
         ceres::CostFunction *cost_function =
-          ReprojectionErrorWithQuaternions::Create(measured_pts_2D[j].x,
+          ReprojectionErrorWithQuaternions2::Create(measured_pts_2D[j].x,
                                                    measured_pts_2D[j].y,
                                                    intrinsicMatrix(0,0),
                                                    intrinsicMatrix(1,1),
                                                    intrinsicMatrix(0,2),
-                                                   intrinsicMatrix(1,2));
+                                                   intrinsicMatrix(1,2),
+                                                   param_point_3D[j]
+                                                   );
 
-        double p[2], proj_p[2];
-        p[0] = measured_pts_2D[j].x;
-        p[1] = measured_pts_2D[j].y;
-        current_error = computeReprojectionErrors(param_point_3D[j],
-                                           p,
-                                           intrinsicMatrix(0,0),
-                                           intrinsicMatrix(1,1),
-                                           intrinsicMatrix(0,2),
-                                           intrinsicMatrix(1,2),
-                                           param_camera_rot[i-1],
-                                           param_camera_trans[i-1],
-                                           proj_p);
+//         double p[2], proj_p[2];
+//         p[0] = measured_pts_2D[j].x;
+//         p[1] = measured_pts_2D[j].y;
+//         current_error = computeReprojectionErrors(param_point_3D[j],
+//                                            p,
+//                                            intrinsicMatrix(0,0),
+//                                            intrinsicMatrix(1,1),
+//                                            intrinsicMatrix(0,2),
+//                                            intrinsicMatrix(1,2),
+//                                            param_camera_rot[i-1],
+//                                            param_camera_trans[i-1],
+//                                            proj_p);
 
 //         PRINT(current_error);
-        error += current_error;
+//         error += current_error;
 
 
 
         problem.AddResidualBlock(cost_function,
                                 NULL,                       // squared loss
                                 param_camera_rot[i-1],      // camera_rot i
-                                param_camera_trans[i-1],    // camera_trans i
-                                param_point_3D[j]);         // point j
+                                param_camera_trans[i-1]    // camera_trans i
+                                );         // point j
       }
-      PRINT(error)
+//       PRINT(error)
     }
-*/
+
 
     // show info
     cout << "i:" << i
@@ -532,7 +534,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   // publish markers
   vis_pub.publish(marker_array);
 
-/*
+
   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
   {
     print_array(param_camera_rot[i], 4,   "param_camera[i]:");
@@ -540,14 +542,13 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   }
 
   ceres::Solver::Options options;
-  options.linear_solver_type = ceres::DENSE_SCHUR;
+  options.linear_solver_type = ceres::ITERATIVE_SCHUR; //  DENSE_SCHUR;
   options.minimizer_progress_to_stdout = true;
 //   options.minimizer_progress_to_stdout = false;
 
   ceres::Solver::Summary summary;
   ceres::Solve(options, &problem, &summary);
   std::cout << summary.FullReport() << "\n";
-
 
   cout << "\n";
   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
@@ -556,79 +557,62 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     print_array(param_camera_trans[i], 3, "               :");
   }
 
-//   for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
-//   {
-//     KDL::Frame frame;
-//     double *camera_rot = param_camera_rot[i];
-//     double *camera_trans = param_camera_trans[i];
-//     frame.M.Quaternion(camera_rot[0],
-//                        camera_rot[1],
-//                        camera_rot[2],
-//                        camera_rot[3]);
-//
-//     frame.p.data[0] = camera_trans[0];
-//     frame.p.data[1] = camera_trans[1];
-//     frame.p.data[2] = camera_trans[2];
-//
-//
-//     KDL::Frame current_position = frame.Inverse() * T0;
-//     current_position.M.GetQuaternion(camera_rot[0],
-//                                      camera_rot[1],
-//                                      camera_rot[2],
-//                                      camera_rot[3]);
-//
-//     camera_trans[0] = current_position.p.x();
-//     camera_trans[1] = current_position.p.y();
-//     camera_trans[2] = current_position.p.z();
-//
-//     urdf::Pose pose = robot_state->getPose(frame_name[i+1]);
-//     pose.rotation.setFromQuaternion(camera_rot[0],
-//                                     camera_rot[1],
-//                                     camera_rot[2],
-//                                     camera_rot[3]);
-//     pose.position.x = camera_trans[0];
-//     pose.position.y = camera_trans[1];
-//     pose.position.z = camera_trans[2];
-//     robot_state->setPose(frame_name[i+1], pose);
-//   }
-//
-//   sleep(2);
-//   robot_state->updateTree();
-// //   vis_pub.publish(marker_array);
-*/
-
-//   Mat rot;
-//   kdl2cv(T0.M, rot);
-//   PRINT(rot);
-//
-//   kdl2cv((pose_father[0] * pose_rel[0]).M, rot);
-//   PRINT(rot);
-
-//   int i=1;
-  for( int i=1; i<corrected.size(); i++)
+  for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
   {
-//     PRINT(frame_name.at(i))
-    KDL::Frame R = (pose_father[i] * pose_rel[i]).Inverse() * T0;
+    KDL::Frame frame;
+    double *camera_rot = param_camera_rot[i];
+    double *camera_trans = param_camera_trans[i];
+    frame.M.Quaternion(camera_rot[0],
+                       camera_rot[1],
+                       camera_rot[2],
+                       camera_rot[3]);
 
-    KDL::Frame new_rel;
-    new_rel = pose_father[i].Inverse() * T0 * corrected[i];// R.Inverse();
+    frame.p.data[0] = camera_trans[0];
+    frame.p.data[1] = camera_trans[1];
+    frame.p.data[2] = camera_trans[2];
 
-    urdf::Pose pose = robot_state->getUrdfPose(frame_name.at(i));
-    KDL::Frame fr = new_rel;
-    double x,y,z,w;
-    fr.M.GetQuaternion(x,y,z,w);
-    pose.rotation.x = x;    /// pose es relativo to its father!!
-    pose.rotation.y = y;
-    pose.rotation.z = z;
-    pose.rotation.w = w;
-    pose.position.x = fr.p.x();
-    pose.position.y = fr.p.y();
-    pose.position.z = fr.p.z();
-//     pose.rotation.normalize();
-    robot_state->setUrdfPose(frame_name.at(i), pose);
+
+    KDL::Frame current_position = pose_father[i+1].Inverse() * T0 * frame.Inverse();
+    urdf::Pose pose;
+    kdl2urdf(current_position, &pose);
+    robot_state->setUrdfPose(frame_name[i+1], pose);
   }
+
   sleep(1);
   robot_state->updateTree();
+
+  for (int i=0; i < marker_array.markers.size(); i++)
+  {
+    marker_array.markers[i].header.stamp = ros::Time();
+  }
+  vis_pub.publish(marker_array);
+
+
+
+
+// //   int i=1;
+//   for( int i=1; i<corrected.size(); i++)
+//   {
+//     KDL::Frame R = (pose_father[i] * pose_rel[i]).Inverse() * T0;
+//
+//     KDL::Frame new_rel;
+//     new_rel = pose_father[i].Inverse() * T0 * corrected[i];// R.Inverse();
+//
+//     urdf::Pose pose = robot_state->getUrdfPose(frame_name.at(i));
+//     KDL::Frame fr = new_rel;
+//     double x,y,z,w;
+//     fr.M.GetQuaternion(x,y,z,w);
+//     pose.rotation.x = x;    /// pose es relativo to its father!!
+//     pose.rotation.y = y;
+//     pose.rotation.z = z;
+//     pose.rotation.w = w;
+//     pose.position.x = fr.p.x();
+//     pose.position.y = fr.p.y();
+//     pose.position.z = fr.p.z();
+//     robot_state->setUrdfPose(frame_name.at(i), pose);
+//   }
+//   sleep(1);
+//   robot_state->updateTree();
 }
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
