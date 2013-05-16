@@ -53,11 +53,13 @@
 #include "chessboard.h"
 #include "conversion.h"
 #include "joint_state.h"
+#include "markers.h"
 #include "projection.h"
 #include "robot_state.h"
 #include "robot_state_publisher.h"
 #include "calibration_msgs/RobotMeasurement.h"
 
+#include "cost_functions.h"
 #include "optimization.h"
 
 using namespace std;
@@ -66,12 +68,12 @@ using namespace calib;
 
 // global variables
 RobotStatePublisher *robot_state;
-ros::Publisher vis_pub;
+Markers *visual_markers;
 
 #define NUM_COLORS 8
 Scalar colors[NUM_COLORS] = {
-  Scalar(255,0,0),   Scalar(0,255,0),   Scalar(0,0,255),
-  Scalar(255,255,0), Scalar(255,0,255), Scalar(0,255,255),
+  Scalar(255,0,0),     Scalar(0,255,0),   Scalar(0,0,255),
+  Scalar(255,255,0),   Scalar(255,0,255), Scalar(0,255,255),
   Scalar(255,255,255), Scalar(0,0,0)
 };
 
@@ -93,64 +95,6 @@ void getCheckboardSize(const string &target_id, ChessBoard *cb)
     cb->setSize( 4, 5, 0.0245 );
     return;
   }
-}
-
-void print_mat(Mat tmp)
-{
-  cout << "size: " << tmp.rows << "x" << tmp.cols << endl;
-  cout << tmp/*.t()*/ << endl;
-}
-
-// find chessboard pose using solvePnP
-// TODO: move to another place
-double findChessboardPose(cv::InputArray objectPoints,
-                          cv::InputArray imagePoints,
-                          cv::InputArray cameraMatrix,
-                          cv::InputArray distCoeffs,
-                          cv::OutputArray rvec,
-                          cv::OutputArray tvec,
-                          cv::OutputArray proj_points2D =cv::noArray())
-{
-  cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs,
-               rvec, tvec, false, CV_ITERATIVE);
-
-  // reprojection error
-  double err = computeReprojectionErrors(objectPoints, imagePoints,
-                                         cameraMatrix, distCoeffs,
-                                         rvec, tvec, proj_points2D);
-
-  return err;
-}
-
-void setMarkers(const int id,  // needed for MarkerArray
-                     const string &ns,
-                     const string &frame,
-                     visualization_msgs::Marker *marker,
-                     const Scalar &color =Scalar(255,255,0), // Scalar(B,G,R)
-                     const double &scale =0.02)
-{
-  marker->id = id;
-  marker->ns = ns;  // hack which allows to select the camera in RViz
-  marker->header.frame_id = frame;
-  marker->header.stamp = ros::Time();
-//   marker->type = visualization_msgs::Marker::CUBE_LIST;
-  marker->type = visualization_msgs::Marker::SPHERE_LIST;
-  marker->action = visualization_msgs::Marker::ADD;
-
-  marker->scale.x = scale;
-  marker->scale.y = scale;
-  marker->scale.z = scale;
-
-  marker->color.b = color[0] / 255;
-  marker->color.g = color[1] / 255;
-  marker->color.r = color[2] / 255;
-  marker->color.a = 1.0;
-}
-
-void points2markers(const Mat board_measured_pts_3D,
-                    visualization_msgs::Marker *marker)
-{
-  cv2ros(board_measured_pts_3D, &(marker->points));
 }
 
 /// \brief transform 3D using the Rotation and Translation defined in frame
@@ -186,7 +130,7 @@ void transform3DPoints(const cv::Mat &points,
   KDL::Frame pose1, pose2;
   robot_state->getFK(frame1, &pose1);
   robot_state->getFK(frame2, &pose2);
-  transform3DPoints(points, pose2 * pose1.Inverse(), modif_points);
+  transform3DPoints(points, pose2.Inverse() * pose1, modif_points);
 }
 
 
@@ -222,16 +166,7 @@ double calc_error(T observed_x, T observed_y,
 
 void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
-  // Working around RViz bug, it doesn't delete some points of previous markers
-  // if the number of checherboards are less
-  static visualization_msgs::MarkerArray marker_array;
-  for (int i=0; i < marker_array.markers.size(); i++)
-  {
-    marker_array.markers[i].header.stamp = ros::Time();
-    marker_array.markers[i].points.clear();
-  }
-  vis_pub.publish(marker_array);
-  marker_array.markers.clear();
+  visual_markers->reset();
 
   // generate 3D chessboard corners (board_points)
   ChessBoard cb;
@@ -373,7 +308,6 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
 
     // checkboard visualization
-    visualization_msgs::Marker marker;
     string current_frame;
 
     // TODO: some frame are hard code here. Is it a possible error in the bag?
@@ -403,54 +337,58 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 //     pose = pose_f * pose;
 
     frame_name.push_back(current_frame);
-    setMarkers(i, robot_measurement->M_cam.at(i).camera_id,
-               current_frame, &marker,
-               chooseColor(i));
+    Mat modif_points;
+    transform3DPoints(board_measured_pts_3D,
+                      current_frame, "base_footprint",
+                      &modif_points);
+    visual_markers->addMarkers(modif_points,
+                               robot_measurement->M_cam.at(i).camera_id,
+                               "base_footprint",
+                               chooseColor(i));
+
+//     points2markers(board_measured_pts_3D, &marker);
+//     marker_array.markers.push_back(marker);
 
 
-    points2markers(board_measured_pts_3D, &marker);
-    marker_array.markers.push_back(marker);
-
-
-    //! choose one (example). TODO: delete this!
-    string frame0, frame1, f;
-    visualization_msgs::Marker m, m2;
-    if (i == 1)
-    {
-      frame0  = "narrow_stereo_optical_frame"; //cam_model.tfFrame();
-      frame1 = "wide_stereo_optical_frame";
-      f = "base_footprint";
-
-      // T_0 (camera '0' KDL::Frame to robot)
-      robot_state->getFK(frame0, &T0);
-//       transform3DPoints(board_pts_frame0, T0, &new_pts_3D);
-
-      // T
-      robot_state->getFK(frame1, &T);
-      KDL::Frame R, R_prime, E;
-      R = T.Inverse() * T0;
-      transform3DPoints(board_pts_frame0, R, &board_pts_frame1); // in the frame1
-
-      Mat board_pts_frame1_using_correction;
-      R_prime = corrected.at(1) * corrected.at(0).Inverse();   // corrected fram1
-      E = R_prime * R.Inverse();                               // frame error
-      transform3DPoints(board_pts_frame0,
-                        E.Inverse() * R_prime, &board_pts_frame1_using_correction);
-
-      setMarkers(i, "new",
-                    frame1, &m,
-                    colors[i+1]);
-      points2markers(board_pts_frame1_using_correction, &m);
-      marker_array.markers.push_back(m);
-
-//       transform3DPoints(new_pts_3D, frame, frame2, &new_pts_3D_2);
-
-      setMarkers(i, "new2",
-                    frame1, &m2,
-                    colors[i+2]);
-      points2markers(board_pts_frame1, &m2);
-      marker_array.markers.push_back(m2);
-    }
+//     //! choose one (example). TODO: delete this!
+//     string frame0, frame1, f;
+//     visualization_msgs::Marker m, m2;
+//     if (i == 1)
+//     {
+//       frame0  = "narrow_stereo_optical_frame"; //cam_model.tfFrame();
+//       frame1 = "wide_stereo_optical_frame";
+//       f = "base_footprint";
+//
+//       // T_0 (camera '0' KDL::Frame to robot)
+//       robot_state->getFK(frame0, &T0);
+// //       transform3DPoints(board_pts_frame0, T0, &new_pts_3D);
+//
+//       // T
+//       robot_state->getFK(frame1, &T);
+//       KDL::Frame R, R_prime, E;
+//       R = T.Inverse() * T0;
+//       transform3DPoints(board_pts_frame0, R, &board_pts_frame1); // in the frame1
+//
+//       Mat board_pts_frame1_using_correction;
+//       R_prime = corrected.at(1) * corrected.at(0).Inverse();   // corrected fram1
+//       E = R_prime * R.Inverse();                               // frame error
+//       transform3DPoints(board_pts_frame0,
+//                         E.Inverse() * R_prime, &board_pts_frame1_using_correction);
+//
+//       setMarkers(i, "new",
+//                     frame1, &m,
+//                     colors[i+1]);
+//       points2markers(board_pts_frame1_using_correction, &m);
+//       marker_array.markers.push_back(m);
+//
+// //       transform3DPoints(new_pts_3D, frame, frame2, &new_pts_3D_2);
+//
+//       setMarkers(i, "new2",
+//                     frame1, &m2,
+//                     colors[i+2]);
+//       points2markers(board_pts_frame1, &m2);
+//       marker_array.markers.push_back(m2);
+//     }
 
 
     //! Optimization
@@ -517,7 +455,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   }
 
   // publish markers
-  vis_pub.publish(marker_array);
+  visual_markers->puslish();
 
 
   for (int i = 0; i < robot_measurement->M_cam.size(); i++)
@@ -567,11 +505,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   sleep(1);
   robot_state->updateTree();
 
-  for (int i=0; i < marker_array.markers.size(); i++)
-  {
-    marker_array.markers[i].header.stamp = ros::Time();
-  }
-  vis_pub.publish(marker_array);
+  visual_markers->resetTime();
 
 
 
@@ -647,7 +581,7 @@ int main(int argc, char **argv)
                                                        robotMeasurementCallback);
 
   // visualization marker publisher
-  vis_pub = n.advertise<visualization_msgs::MarkerArray>( "visualization_marker_array", 0 );
+  visual_markers = new Markers;
 
 
   // read bag filename from param
@@ -661,14 +595,22 @@ int main(int argc, char **argv)
   // read rosbag
   rosbag::Bag bag(rosbag_filename);
   rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
-  vector<calibration_msgs::RobotMeasurement::ConstPtr> cal_msgs;
+  vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
   BOOST_FOREACH(rosbag::MessageInstance const m, view)
   {
-    calibration_msgs::RobotMeasurement::ConstPtr i = m.instantiate<calibration_msgs::RobotMeasurement>();
+    calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
     if (i != NULL)
-      cal_msgs.push_back(i);
+      msgs.push_back(i);
   }
   bag.close();
+
+
+  // Optimization
+  Optimization optimazer;
+  optimazer.setRobotState(robot_state);
+  optimazer.setBagData(msgs);
+  optimazer.run();
+
 
   ros::spin();
 

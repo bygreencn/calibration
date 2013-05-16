@@ -71,6 +71,8 @@ add_executable(run_estimation
                  src/cpp/chessboard.cpp
                  src/cpp/conversion.cpp
                  src/cpp/joint_state.cpp
+                 src/cpp/markers.cpp
+                 src/cpp/optimization.cpp
                  src/cpp/projection.cpp
                  src/cpp/robot_state.cpp
                  src/cpp/robot_state_publisher.cpp
