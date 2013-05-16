@@ -35,6 +35,10 @@
 //! \author Pablo Speciale
 
 #include "chessboard.h"
+#include "projection.h"
+
+#include <opencv2/calib3d/calib3d.hpp>
+
 
 namespace calib
 {
@@ -77,6 +81,26 @@ void ChessBoard::setSize(int width, int height, float square_size)
   width_       = width;
   height_      = height;
   square_size_ = square_size;
+}
+
+
+double findChessboardPose(cv::InputArray objectPoints,
+                          cv::InputArray imagePoints,
+                          cv::InputArray cameraMatrix,
+                          cv::InputArray distCoeffs,
+                          cv::OutputArray rvec,
+                          cv::OutputArray tvec,
+                          cv::OutputArray proj_points2D)
+{
+  cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs,
+               rvec, tvec, false, CV_ITERATIVE);
+
+  // reprojection error
+  double err = computeReprojectionErrors(objectPoints, imagePoints,
+                                         cameraMatrix, distCoeffs,
+                                         rvec, tvec, proj_points2D);
+
+  return err;
 }
 
 }

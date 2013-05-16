@@ -53,9 +53,9 @@ public:
   bool empty();
 
   /// \brief Generates ChessBoard corners, 3D points assuming Z=0
-  /// \For simplicity, the coordinate system has been chosen such 
-  /// \that one of the chessboard corners is in the origin and the
-  /// \board is in the plane Z=0.
+  /// for simplicity, the coordinate system has been chosen such
+  /// that one of the chessboard corners is in the origin and the
+  /// board is in the plane Z=0.
   void generateCorners(std::vector<cv::Point3d> *corners);
   void generateCorners(cv::Mat_<double> *corners);
 
@@ -72,6 +72,15 @@ private:
   int   height_;       // corners_y
   float square_size_;  // meters, e.i: 0.108 => 108 mm
 };
+
+/// \brief Find chessboard pose using solvePnP
+double findChessboardPose(cv::InputArray objectPoints,
+                          cv::InputArray imagePoints,
+                          cv::InputArray cameraMatrix,
+                          cv::InputArray distCoeffs,
+                          cv::OutputArray rvec,
+                          cv::OutputArray tvec,
+                          cv::OutputArray proj_points2D =cv::noArray());
 
 }
 
