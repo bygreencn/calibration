@@ -34,70 +34,69 @@
 
 //! \author Pablo Speciale
 
-
-#ifndef OPTIMIZATION_H
-#define OPTIMIZATION_H
-
-
-#include "calibration_msgs/RobotMeasurement.h"
-
-#include "auxiliar.h"
-#include "chessboard.h"
-#include "conversion.h"
-#include "joint_state.h"
-#include "projection.h"
+#include "optimization.h"
 #include "robot_state.h"
-#include "robot_state_publisher.h"
-#include "calibration_msgs/RobotMeasurement.h"
+
+#include <ros/ros.h>
+#include <opencv2/calib3d/calib3d.hpp>
+
+using namespace std;
+using namespace cv;
 
 namespace calib
 {
 
-class RobotState;
-
-
-class Optimization
+Optimization::Optimization()
 {
-public:
-  typedef calibration_msgs::RobotMeasurement::Ptr Msg;
-
-  Optimization();
-  ~Optimization();
-
-  void setRobotState(RobotState *robot_state);
-
-  void setBagData(std::vector<Msg> &msgs);
-
-  // addData
-  // deleteData
-
-  void addMeasurement(Msg &msg);
-
-//   generateView();
-
-  void run();
-
-  /// \brief Check if it is empty (valid)
-//   bool empty();
-
-//   run();
-//   void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement);
-
-protected:
-  // TODO: read this information from the system.yaml
-  void getCheckboardSize(const std::string &target_id, ChessBoard *cb);
-
-  /// \brief Generate 3D chessboard corners (board_points)
-  void generateCorners(Msg &msg, std::vector<cv::Point3d> *board_model_pts_3D);
-
-
-private:
-  RobotState *robot_state_;
-  std::vector<Msg> msgs_;
-};
-
+  robot_state_ = 0;
+  msgs_.clear();
 }
 
-#endif // OPTIMIZATION_H
+Optimization::~Optimization()
+{
+}
 
+void Optimization::setRobotState(RobotState *robot_state)
+{
+  robot_state_ = robot_state;
+}
 
+void Optimization::setBagData(vector<Msg> &msgs)
+{
+  msgs_ = msgs;
+}
+
+void Optimization::run()
+{
+  // check if the state is valid
+  if( robot_state_ == 0 || msgs_.empty() )
+  {
+    ROS_ERROR("The optimazer data is not complete");
+    return;
+  }
+}
+
+void Optimization::getCheckboardSize(const string &target_id,
+                                     ChessBoard *cb)
+{
+  if (target_id == "large_cb_7x6")
+  {
+    cb->setSize(7, 6, 0.108);
+    return;
+  }
+
+  if (target_id == "small_cb_4x5")
+  {
+    cb->setSize(4, 5, 0.0245);
+    return;
+  }
+}
+
+void Optimization::generateCorners(Msg &msg, vector<Point3d> *board_model_pts_3D)
+{
+  ChessBoard cb;
+  getCheckboardSize(msg->target_id, &cb);
+  cb.generateCorners(board_model_pts_3D);
+}
+
+}
