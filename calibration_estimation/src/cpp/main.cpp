@@ -463,62 +463,47 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
       // T_0 (camera '0' KDL::Frame to robot)
       robot_state->getFK(current_frame, &T0);
+//       KDL::Frame current_position = T0.Inverse() * T0;  // identity
     }
-    else {
-      robot_state->getFK(current_frame, &T);
-      KDL::Frame current_position = (pose_father[i]*pose_rel[i]).Inverse() * T0;
 
-      // generate cameras
-      double *camera_rot = new double[4];
-      serialize(current_position.M, camera_rot);
-      param_camera_rot.push_back(camera_rot);
+    robot_state->getFK(current_frame, &T);
+    KDL::Frame current_position = (pose_father[i]*pose_rel[i]).Inverse() * T0;
 
-      double *camera_trans = new double[3];
-      serialize(current_position.p, camera_trans);
-      param_camera_trans.push_back(camera_trans);
+    // generate cameras
+    double *camera_rot = new double[4];
+    serialize(current_position.M, camera_rot);
+    param_camera_rot.push_back(camera_rot);
 
-//       double error = 0;
+    double *camera_trans = new double[3];
+    serialize(current_position.p, camera_trans);
+    param_camera_trans.push_back(camera_trans);
 
-      Matx33d intrinsicMatrix = cam_model.intrinsicMatrix();
-      // feed optimazer with data
-      assert(measured_pts_2D.size() == board_model_pts_3D.size());
-      for (int j = 0; j < measured_pts_2D.size(); j++)
-      {
-        ceres::CostFunction *cost_function =
-          ReprojectionErrorWithQuaternions2::Create(measured_pts_2D[j].x,
-                                                   measured_pts_2D[j].y,
-                                                   intrinsicMatrix(0,0),
-                                                   intrinsicMatrix(1,1),
-                                                   intrinsicMatrix(0,2),
-                                                   intrinsicMatrix(1,2),
-                                                   param_point_3D[j]
-                                                   );
+    Matx33d intrinsicMatrix = cam_model.intrinsicMatrix();
+    // feed optimazer with data
+    assert(measured_pts_2D.size() == board_model_pts_3D.size());
+    for (int j = 0; j < measured_pts_2D.size(); j++)
+    {
+      ceres::CostFunction *cost_function =
+        ReprojectionErrorWithQuaternions2::Create(measured_pts_2D[j].x,
+                                                  measured_pts_2D[j].y,
+                                                  intrinsicMatrix(0,0),
+                                                  intrinsicMatrix(1,1),
+                                                  intrinsicMatrix(0,2),
+                                                  intrinsicMatrix(1,2),
+                                                  param_point_3D[j]
+                                                  );
 
-//         double p[2], proj_p[2];
-//         p[0] = measured_pts_2D[j].x;
-//         p[1] = measured_pts_2D[j].y;
-//         current_error = computeReprojectionErrors(param_point_3D[j],
-//                                            p,
-//                                            intrinsicMatrix(0,0),
-//                                            intrinsicMatrix(1,1),
-//                                            intrinsicMatrix(0,2),
-//                                            intrinsicMatrix(1,2),
-//                                            param_camera_rot[i-1],
-//                                            param_camera_trans[i-1],
-//                                            proj_p);
+      problem.AddResidualBlock(cost_function,
+                              NULL,                       // squared loss
+                              param_camera_rot[i],      // camera_rot i
+                              param_camera_trans[i]    // camera_trans i
+                              );         // point j
+    }
 
-//         PRINT(current_error);
-//         error += current_error;
-
-
-
-        problem.AddResidualBlock(cost_function,
-                                NULL,                       // squared loss
-                                param_camera_rot[i-1],      // camera_rot i
-                                param_camera_trans[i-1]    // camera_trans i
-                                );         // point j
-      }
-//       PRINT(error)
+    if (i==0)
+    {
+      problem.SetParameterBlockConstant(camera_rot);
+      problem.SetParameterBlockConstant(camera_trans);
     }
 
 
@@ -535,14 +520,14 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   vis_pub.publish(marker_array);
 
 
-  for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
+  for (int i = 0; i < robot_measurement->M_cam.size(); i++)
   {
     print_array(param_camera_rot[i], 4,   "param_camera[i]:");
     print_array(param_camera_trans[i], 3, "               :");
   }
 
   ceres::Solver::Options options;
-  options.linear_solver_type = ceres::ITERATIVE_SCHUR; //  DENSE_SCHUR;
+  options.linear_solver_type = ceres::DENSE_SCHUR;
   options.minimizer_progress_to_stdout = true;
 //   options.minimizer_progress_to_stdout = false;
 
@@ -551,13 +536,14 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
   std::cout << summary.FullReport() << "\n";
 
   cout << "\n";
-  for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
+  for (int i = 0; i < robot_measurement->M_cam.size(); i++)
   {
     print_array(param_camera_rot[i],   4, "param_camera[i]:");
     print_array(param_camera_trans[i], 3, "               :");
   }
 
-  for (int i = 0; i < robot_measurement->M_cam.size()-1; i++)
+  // i=1 (update all cameras except the first one)
+  for (int i = 1; i < robot_measurement->M_cam.size(); i++)
   {
     KDL::Frame frame;
     double *camera_rot = param_camera_rot[i];
@@ -572,10 +558,10 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     frame.p.data[2] = camera_trans[2];
 
 
-    KDL::Frame current_position = pose_father[i+1].Inverse() * T0 * frame.Inverse();
+    KDL::Frame current_position = pose_father[i].Inverse() * T0 * frame.Inverse();
     urdf::Pose pose;
     kdl2urdf(current_position, &pose);
-    robot_state->setUrdfPose(frame_name[i+1], pose);
+    robot_state->setUrdfPose(frame_name[i], pose);
   }
 
   sleep(1);

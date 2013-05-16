@@ -114,51 +114,6 @@ double computeReprojectionErrors(InputArray points3D,
   return _norm(x, proj_points2D);
 }
 
-double computeReprojectionErrors(const double _point3D[3],
-                                 const double _point2D[2],
-                                 const double fx, const double fy, // intrinsics
-                                 const double cx, const double cy, // intrinsics
-                                 const double _camera_rotation[4],
-                                 const double _camera_translation[3],
-                                 double _proj_point2D[2])
-{
-  Point3d point3D(_point3D[0], _point3D[1], _point3D[2]);
-  Point2d point2D(_point2D[0], _point2D[1]);
-
-  Matx33d rvec;
-  deserialize(_camera_rotation, &rvec);
-
-  Vec3d tvec;
-  deserialize(_camera_translation, &tvec);
-
-  Mat_<double> cameraMatrix = (Mat_<double>(3,3) << 0, 0, 0, 0, 0, 0, 0, 0, 0);
-  cameraMatrix(0,0) = fx;
-  cameraMatrix(1,1) = fy;
-  cameraMatrix(0,2) = cx;
-  cameraMatrix(1,2) = cy;
-
-  Mat proj_point2D;
-  Mat D;
-
-  vector<Point3d> ptVec3D;
-  ptVec3D.push_back(Point3d(point3D));
-
-  projectPoints(ptVec3D, rvec, tvec, cameraMatrix, D, proj_point2D);
-
-  if( _proj_point2D )
-  {
-    _proj_point2D[0] = proj_point2D.at<double>(0,0);
-    _proj_point2D[1] = proj_point2D.at<double>(0,1);
-  }
-
-  Point2d proj_point2D_2(proj_point2D.at<double>(0,0), proj_point2D.at<double>(0,1));
-
-  return cv::norm(Mat(point2D), Mat(proj_point2D_2), CV_L2);
-//   double x_diff = point2D.x - proj_point2D_2.x;
-//   double y_diff = point2D.y - proj_point2D_2.y;
-//   return sqrt(x_diff*x_diff + y_diff*y_diff);
-}
-
 void transform3DPoints(const Mat &points,
                        const Mat &rvec,
                        const Mat &tvec,

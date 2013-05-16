@@ -118,20 +118,6 @@ struct ReprojectionErrorWithQuaternions2 {
                   const double* camera_translation,
                   double *residuals) const
   {
-//     double p[2];
-//     double proj_p[2];
-//
-//     p[0] = observed_x;
-//     p[1] = observed_y;
-//     double current_error = computeReprojectionErrors(point, p,
-//                                            fx, fy, cx, cy,
-//                                            camera_rotation,
-//                                            camera_translation,
-//                                            proj_p);
-//
-//     residuals[0] = proj_p[0] - double(observed_x);
-//     residuals[1] = proj_p[1] - double(observed_y);
-
     // camera_rotation are the quaternions
     double p[3];
     ceres::QuaternionRotatePoint(camera_rotation, point, p);

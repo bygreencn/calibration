@@ -63,16 +63,6 @@ double computeReprojectionErrors(cv::InputArray points3D,
                                  cv::InputArray tvec,
                                  cv::OutputArray proj_points2D =cv::noArray());
 
-/// \brief Calculate reprojection error
-double computeReprojectionErrors(const double points3D[3],
-                                 const double points2D[2],
-                                 const double fx, const double fy, // intrinsics
-                                 const double cx, const double cy, // intrinsics
-                                 const double camera_rotation[4],
-                                 const double camera_translation[3],
-                                 double proj_points2D[2] =0);
-
-
 /// \brief Transform 3D points using rvec (3x1 or 1x3 or 3x3) and tvec (3x1)
 void transform3DPoints(const cv::Mat &points,
                        const cv::Mat &rvec,
