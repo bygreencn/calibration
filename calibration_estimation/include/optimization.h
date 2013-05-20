@@ -62,32 +62,28 @@ public:
   Optimization();
   ~Optimization();
 
-  // Set optimizer funtions
+  /// \brief Set optimizer funtions
   void setRobotState(RobotState *robot_state);
   void setBagData(std::vector<Msg> *msgs);
   void setMarkers(Markers *markers);
 
+  /// \brief Check is the state is valid
+  bool valid();
 
   // addData
   // deleteData
 
+  /// \brief Add one RobotMeasurement
   void addMeasurement(Msg &msg);
 
-//   generateView();
-
-  bool valid();
-
   void run();
-
-  /// \brief Check if it is empty (valid)
-//   bool empty();
 
 //   run();
 //   void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement);
 
 private:
   RobotState        *robot_state_;
-  std::vector<Msg>  *msgs_;
+  std::vector<View>  view_;
   Markers           *markers_;
 };
 
