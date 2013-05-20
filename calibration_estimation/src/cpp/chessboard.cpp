@@ -38,7 +38,10 @@
 #include "projection.h"
 
 #include <opencv2/calib3d/calib3d.hpp>
+#include <ros/ros.h>
 
+using namespace std;
+using namespace cv;
 
 namespace calib
 {
@@ -51,7 +54,7 @@ ChessBoard::~ChessBoard()
 {
 }
 
-void ChessBoard::generateCorners(std::vector<cv::Point3d> *corners)
+void ChessBoard::generateCorners(vector<Point3d> *corners)
 {
   // clear corners
   corners->clear();
@@ -59,15 +62,15 @@ void ChessBoard::generateCorners(std::vector<cv::Point3d> *corners)
   // generate corners: (x,y,z)
   for ( int j = 0; j < height_; j++ )
     for ( int i = 0; i < width_; i++ )
-      corners->push_back( cv::Point3d( float(i*square_size_),
+      corners->push_back( Point3d( float(i*square_size_),
                                        float(j*square_size_), 0 ) );
 }
 
-void ChessBoard::generateCorners(cv::Mat_<double> *corners)
+void ChessBoard::generateCorners(Mat_<double> *corners)
 {
-  std::vector<cv::Point3d> pts;
+  vector<Point3d> pts;
   generateCorners(&pts);
-  *corners = cv::Mat(pts);
+  *corners = Mat(pts);
   transpose(*corners, *corners);
 }
 
@@ -84,15 +87,15 @@ void ChessBoard::setSize(int width, int height, float square_size)
 }
 
 
-double findChessboardPose(cv::InputArray objectPoints,
-                          cv::InputArray imagePoints,
-                          cv::InputArray cameraMatrix,
-                          cv::InputArray distCoeffs,
-                          cv::OutputArray rvec,
-                          cv::OutputArray tvec,
-                          cv::OutputArray proj_points2D)
+double findChessboardPose(InputArray objectPoints,
+                          InputArray imagePoints,
+                          InputArray cameraMatrix,
+                          InputArray distCoeffs,
+                          OutputArray rvec,
+                          OutputArray tvec,
+                          OutputArray proj_points2D)
 {
-  cv::solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs,
+  solvePnP(objectPoints, imagePoints, cameraMatrix, distCoeffs,
                rvec, tvec, false, CV_ITERATIVE);
 
   // reprojection error
@@ -101,6 +104,20 @@ double findChessboardPose(cv::InputArray objectPoints,
                                          rvec, tvec, proj_points2D);
 
   return err;
+}
+
+void getCheckboardSize(const string &target_id, ChessBoard *cb)
+{
+  if (target_id == "large_cb_7x6")
+  {
+    cb->setSize(7, 6, 0.108);
+  }
+  else if (target_id == "small_cb_4x5")
+  {
+    cb->setSize(4, 5, 0.0245);
+  }
+  else
+    ROS_ERROR("Wrong Checkboard size");
 }
 
 }

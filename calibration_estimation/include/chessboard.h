@@ -82,6 +82,9 @@ double findChessboardPose(cv::InputArray objectPoints,
                           cv::OutputArray tvec,
                           cv::OutputArray proj_points2D =cv::noArray());
 
+// TODO: read this information from the system.yaml
+void getCheckboardSize(const std::string &target_id, ChessBoard *cb);
+
 }
 
 #endif // CHESS_BOARD_H

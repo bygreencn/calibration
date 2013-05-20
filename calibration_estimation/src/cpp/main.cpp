@@ -81,22 +81,6 @@ Scalar colors[NUM_COLORS] = {
 inline Scalar chooseRandomColor() { return colors[rand() % NUM_COLORS]; }
 inline Scalar chooseColor(int i)  { return colors[i % NUM_COLORS]; }
 
-// TODO: read this information from the system.yaml
-void getCheckboardSize(const string &target_id, ChessBoard *cb)
-{
-  if (target_id == "large_cb_7x6")
-  {
-    cb->setSize( 7, 6, 0.108 );
-    return;
-  }
-
-  if (target_id == "small_cb_4x5")
-  {
-    cb->setSize( 4, 5, 0.0245 );
-    return;
-  }
-}
-
 /// \brief transform 3D using the Rotation and Translation defined in frame
 void transform3DPoints(const cv::Mat &points,
                        const KDL::Frame &frame,
@@ -438,7 +422,7 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
                               );         // point j
     }
 
-    if (i==0)
+    if (i == 0)
     {
       problem.SetParameterBlockConstant(camera_rot);
       problem.SetParameterBlockConstant(camera_trans);
@@ -608,7 +592,8 @@ int main(int argc, char **argv)
   // Optimization
   Optimization optimazer;
   optimazer.setRobotState(robot_state);
-  optimazer.setBagData(msgs);
+  optimazer.setBagData(&msgs);
+  optimazer.setMarkers(visual_markers);
   optimazer.run();
 
 
