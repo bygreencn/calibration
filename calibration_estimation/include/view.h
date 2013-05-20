@@ -35,64 +35,81 @@
 //! \author Pablo Speciale
 
 
-#ifndef OPTIMIZATION_H
-#define OPTIMIZATION_H
+#ifndef VIEW_H
+#define VIEW_H
 
+#include <opencv2/core/core.hpp>
+#include <image_geometry/pinhole_camera_model.h>
+// #include <image_geometry/stereo_camera_model.h>
 
 #include "calibration_msgs/RobotMeasurement.h"
-
-#include "view.h"
-#include "auxiliar.h"
-#include "conversion.h"
-#include "joint_state.h"
-#include "markers.h"
-#include "projection.h"
 #include "robot_state.h"
-#include "robot_state_publisher.h"
-#include "calibration_msgs/RobotMeasurement.h"
 
 namespace calib
 {
 
-class RobotState;
+typedef calibration_msgs::RobotMeasurement::Ptr Msg;
 
-class Optimization
+/** View
+*
+* Container of all the information obtained from a checkerboard sighting
+* It is generated from a Msg message (a robot measurement)
+*
+*/
+class View
 {
 public:
-  Optimization();
-  ~Optimization();
+  typedef std::vector<cv::Point3d> Points3D;
+  typedef std::vector<cv::Point2d> Points2D;
 
-  // Set optimizer funtions
-  void setRobotState(RobotState *robot_state);
-  void setBagData(std::vector<Msg> *msgs);
-  void setMarkers(Markers *markers);
+  View();
+  ~View();
+
+  unsigned id_;
+  Msg msg_;
+
+  Points3D              board_model_pts_3D_;  // generateCorners
+  std::vector<Points2D> measured_pts_2D_;     // getMeasurement
+
+  std::vector<Points2D> expected_pts_2D_;     // findCbPoses
+  std::vector<double>   error_;               // findCbPoses
+  std::vector<cv::Mat>  rvec_;                // findCbPoses
+  std::vector<cv::Mat>  tvec_;                // findCbPoses
+
+  std::vector<image_geometry::PinholeCameraModel> cam_model_;
+//   unsigned cam_number_;  cam_model_.size()
+
+  std::vector<std::string>           frame_name_;
+  std::map<std::string, std::size_t> frame_id_;   // frame_name -> frame_id
+
+  std::vector<KDL::Frame> pose_rel_, pose_father_;
+//   KDL::Frame T0_; // T0_ == pose_father_[0]*pose_rel_[0]
 
 
-  // addData
-  // deleteData
-
-  void addMeasurement(Msg &msg);
-
-//   generateView();
-
-  bool valid();
-
-  void run();
-
-  /// \brief Check if it is empty (valid)
-//   bool empty();
-
-//   run();
-//   void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement);
 
 private:
-  RobotState        *robot_state_;
-  std::vector<Msg>  *msgs_;
-  Markers           *markers_;
+  /// \brief Generate 3D chessboard corners (board_points)
+  void generateCorners();
+
+  /// \brief Get Camera Model from Message
+  void getCameraModels();
+
+  /// \brief Read image points from Message
+  void getMeasurements();
+
+  /// \brief Find chessboard poses using solvePnP
+  void findCbPoses(const std::vector<cv::Point3d> &board_model_pts_3D,
+                   const std::vector<Points2D> &measured_pts_2D,
+                   const std::vector<cv::Mat> &intrinsicMatrix);
+
+  /// \brief Get camera name frame from Message
+  void getFrameNames();
+
+  /// \brief Get Poses from Message and using robot_state_ for calculating the FK
+  void getPoses(RobotState *robot_state_);
 };
 
 }
 
-#endif // OPTIMIZATION_H
-
+#endif // VIEW_H
 
