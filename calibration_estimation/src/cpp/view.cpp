@@ -38,6 +38,8 @@
 #include "chessboard.h"
 #include "conversion.h"
 
+#include <ros/ros.h>
+
 using namespace std;
 using namespace cv;
 
@@ -46,10 +48,40 @@ namespace calib
 
 View::View()
 {
+  robot_state_ = 0;
 }
 
 View::~View()
 {
+}
+
+void View::setRobotState(RobotState *robot_state)
+{
+  robot_state_ = robot_state;
+}
+
+bool View::generateView(Msg &msg)
+{
+  // copy message (this class is a container)
+  msg_ = msg;
+
+  if (robot_state_ == 0)
+  {
+    generateCorners();
+    getCameraModels();
+    getMeasurements();
+    findCbPoses();
+    getFrameNames();
+    getPoses();
+
+    return true;
+  }
+  else
+  {
+    ROS_ERROR("robot_state_ unset, use setRobotState()");
+    return false;
+  }
+
 }
 
 void View::generateCorners()
@@ -61,7 +93,7 @@ void View::generateCorners()
 
 void View::getCameraModels()
 {
-  // clear Camera model vector (cams)
+  // clear Camera model vector (cam_model_)
   cam_model_.clear();
 
   // get Camera models
@@ -106,9 +138,7 @@ void View::getMeasurements()
   }
 }
 
-void View::findCbPoses(const vector<Point3d> &board_model_pts_3D,
-                       const vector<View::Points2D> &measured_pts_2D,
-                       const vector<Mat> &intrinsicMatrix)
+void View::findCbPoses()
 {
   // clean vectors
   rvec_.clear();
@@ -116,15 +146,15 @@ void View::findCbPoses(const vector<Point3d> &board_model_pts_3D,
   expected_pts_2D_.clear();
   error_.clear();
 
-  size_t size = measured_pts_2D.size();
+  size_t size = measured_pts_2D_.size();
   for (size_t i = 0; i < size; i++)
   {
     Mat rvec, tvec;
-    View::Points2D expected_pts_2D;
+    Points2D expected_pts_2D;
     Mat D; // empty for rectified cameras
     // Mat D = cam_model.distortionCoeffs();  // for non-rectified cameras
-    double error = findChessboardPose(board_model_pts_3D, measured_pts_2D[i],
-                                      intrinsicMatrix[i], D,
+    double error = findChessboardPose(board_model_pts_3D_, measured_pts_2D_[i],
+                                      cam_model_[i].intrinsicMatrix(), D,
                                       rvec, tvec, expected_pts_2D);
 
     // add to vector
@@ -174,7 +204,7 @@ void View::getFrameNames()
   }
 }
 
-void View::getPoses(RobotState *robot_state_)
+void View::getPoses()
 {
   for (size_t i = 0; i < msg_->M_cam.size(); i++)
   {

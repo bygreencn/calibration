@@ -65,8 +65,14 @@ public:
   View();
   ~View();
 
-  unsigned id_;
-  Msg msg_;
+  void setRobotState(RobotState *robot_state);
+
+  /// \brief Generate View from RobotMeasurement Message
+  bool generateView(Msg &msg);
+
+
+// public Members
+  Msg msg_;  // most of the rest public member are generated from msg_
 
   Points3D              board_model_pts_3D_;  // generateCorners
   std::vector<Points2D> measured_pts_2D_;     // getMeasurement
@@ -83,8 +89,7 @@ public:
   std::map<std::string, std::size_t> frame_id_;   // frame_name -> frame_id
 
   std::vector<KDL::Frame> pose_rel_, pose_father_;
-//   KDL::Frame T0_; // T0_ == pose_father_[0]*pose_rel_[0]
-
+//   KDL::Frame T0; // T0 == pose_father_[0]*pose_rel_[0]
 
 
 private:
@@ -98,15 +103,16 @@ private:
   void getMeasurements();
 
   /// \brief Find chessboard poses using solvePnP
-  void findCbPoses(const std::vector<cv::Point3d> &board_model_pts_3D,
-                   const std::vector<Points2D> &measured_pts_2D,
-                   const std::vector<cv::Mat> &intrinsicMatrix);
+  void findCbPoses();
 
   /// \brief Get camera name frame from Message
   void getFrameNames();
 
   /// \brief Get Poses from Message and using robot_state_ for calculating the FK
-  void getPoses(RobotState *robot_state_);
+  void getPoses();
+
+
+  RobotState *robot_state_; // it is needed in order to calculate cameras poses
 };
 
 }
