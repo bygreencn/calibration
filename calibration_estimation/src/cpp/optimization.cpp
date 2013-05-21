@@ -62,14 +62,6 @@ void Optimization::setRobotState(RobotState *robot_state)
   robot_state_ = robot_state;
 }
 
-void Optimization::setBagData(vector<Msg> *msgs)
-{
-  for (size_t i = 0; i < msgs->size(); i++)
-  {
-    addMeasurement(msgs->at(i));
-  }
-}
-
 void Optimization::setMarkers(Markers *markers)
 {
   markers_ = markers;
@@ -78,17 +70,6 @@ void Optimization::setMarkers(Markers *markers)
 bool Optimization::valid()
 {
   return robot_state_ != 0 && markers_ != 0;
-}
-
-void Optimization::addMeasurement(Msg &msg)
-{
-  // set and generate view from message
-  View current_view;
-  current_view.setRobotState(robot_state_);
-  current_view.generateView(msg);
-
-  // add to internal vector of views
-  view_.push_back(current_view);
 }
 
 void Optimization::run()

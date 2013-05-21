@@ -70,6 +70,7 @@ add_executable(run_estimation
                  src/cpp/auxiliar.cpp
                  src/cpp/chessboard.cpp
                  src/cpp/conversion.cpp
+                 src/cpp/data.cpp
                  src/cpp/joint_state.cpp
                  src/cpp/markers.cpp
                  src/cpp/optimization.cpp

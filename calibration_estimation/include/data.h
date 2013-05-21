@@ -35,54 +35,60 @@
 //! \author Pablo Speciale
 
 
-#ifndef OPTIMIZATION_H
-#define OPTIMIZATION_H
+#ifndef DATA_H
+#define DATA_H
 
-
-#include "calibration_msgs/RobotMeasurement.h"
-
-#include "data.h"
-#include "auxiliar.h"
-#include "conversion.h"
-#include "joint_state.h"
-#include "markers.h"
-#include "projection.h"
-#include "robot_state.h"
-#include "robot_state_publisher.h"
-#include "calibration_msgs/RobotMeasurement.h"
+#include "view.h"
 
 namespace calib
 {
 
+class Markers;
 class RobotState;
 
-class Optimization
+
+/** Data
+*
+* Data manipulater: it can be inside the optimazer but it will also used
+* for visualization.
+*
+*/
+class Data
 {
 public:
-  Optimization();
-  ~Optimization();
+  Data();
+  ~Data();
 
-  /// \brief Set optimizer funtions
-  void setRobotState(RobotState *robot_state);
-  void setMarkers(Markers *markers);
+  static void setRobotState(RobotState *robot_state);
 
-  /// \brief Check is the state is valid
-  bool valid();
+  /// \brief Add one RobotMeasurement
+  void addMeasurement(Msg &msg);
 
-  void run();
+  void showView(std::size_t id);
 
-//   run();
-//   void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement);
-  void showMeasurement(std::size_t id);
+// public Members
+  std::vector<View>  view_;
 
 private:
-  RobotState        *robot_state_;
-  std::vector<View>  view_;
-  Markers           *markers_;
+  void updateRobot(std::size_t id);
+
+  /// \brief transform 3D using the Rotation and Translation defined in frame
+  void apply_transform(const cv::Mat &points,
+                       const std::string &frame,
+                       cv::Mat *modif_points);
+
+  /// \brief transform 3D from frame1 to frame2
+  void apply_transform(const cv::Mat &points,
+                       const std::string &frame1,
+                       const std::string &frame2,
+                       cv::Mat *modif_points);
+
+
+  static Markers    *markers_;
+  static RobotState *robot_state_;
 };
 
 }
 
-#endif // OPTIMIZATION_H
-
+#endif // DATA_H
 
