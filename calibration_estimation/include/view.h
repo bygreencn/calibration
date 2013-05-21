@@ -75,6 +75,8 @@ public:
   /// \brief Update robot state with the measured joint angles
   void updateRobot();
 
+  /// \brief True if the camera is part of the view (frame name belongs to frame_name_)
+  bool isVisible(const std::string &camera_frame);
 
 // Public Members
   Msg msg_;  // most of the remainig public members are generated from msg_
@@ -90,6 +92,7 @@ public:
 
   std::vector<image_geometry::PinholeCameraModel> cam_model_;
   std::vector<std::string>                        camera_id_;
+  std::map<std::string, std::string>              camera_to_frame_; // camera_ids -> frame_name
 //   unsigned cam_number_;  cam_model_.size()
 
   std::vector<std::string>           frame_name_;

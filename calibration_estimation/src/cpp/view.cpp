@@ -103,6 +103,11 @@ void View::updateRobot()
   }
 }
 
+bool View::isVisible(const std::string &camera)
+{
+  return find(camera_id_.begin(), camera_id_.end(), camera) != camera_id_.end();
+}
+
 void View::generateCorners()
 {
   ChessBoard cb;
@@ -208,25 +213,30 @@ void View::getTransformedPoints()
 void View::getFrameNames()
 {
   frame_name_.clear();
-  frame_id_.clear();
+
+  frame_id_.clear();        // frame_name -> frame_id_
+  camera_to_frame_.clear(); // camera_ids -> frame_name
 
   for (size_t i = 0; i < msg_->M_cam.size(); i++)
   {
     string current_frame;
+    string current_camera_id;
+
+    current_camera_id = camera_id_[i];
 
     // TODO: some frame names are hard-coded here.
     // This is a possible error in the bag file
-    if( camera_id_[i] == "narrow_left_rect" )
+    if( current_camera_id == "narrow_left_rect" )
       current_frame = "narrow_stereo_l_stereo_camera_optical_frame";
-    else if( camera_id_[i] == "narrow_right_rect" )
+    else if( current_camera_id == "narrow_right_rect" )
       current_frame = "narrow_stereo_r_stereo_camera_optical_frame";
-    else if( camera_id_[i] == "wide_left_rect" )
+    else if( current_camera_id == "wide_left_rect" )
       current_frame = "wide_stereo_l_stereo_camera_optical_frame";
-    else if( camera_id_[i] == "wide_right_rect" )
+    else if( current_camera_id == "wide_right_rect" )
       current_frame = "wide_stereo_r_stereo_camera_optical_frame";
-    else if( camera_id_[i] == "kinect_head" )
+    else if( current_camera_id == "kinect_head" )
       current_frame = "head_mount_kinect_rgb_optical_frame";
-    else if( camera_id_[i] == "prosilica_rect" )
+    else if( current_camera_id == "prosilica_rect" )
       current_frame = "high_def_optical_frame";
     else
     {
@@ -239,8 +249,9 @@ void View::getFrameNames()
     // add to vector
     frame_name_.push_back(current_frame);
 
-    // generate map
+    // generate maps
     frame_id_[current_frame] = i;
+    camera_to_frame_[current_camera_id] = current_frame;
   }
 }
 
