@@ -89,6 +89,7 @@ public:
   std::vector<cv::Mat>  tvec_;                     // findCbPoses
 
   std::vector<image_geometry::PinholeCameraModel> cam_model_;
+  std::vector<std::string>                        camera_id_;
 //   unsigned cam_number_;  cam_model_.size()
 
   std::vector<std::string>           frame_name_;

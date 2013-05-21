@@ -114,6 +114,7 @@ void View::getCameraModels()
 {
   // clear Camera model vector (cam_model_)
   cam_model_.clear();
+  camera_id_.clear();
 
   // get Camera models
   size_t size = msg_->M_cam.size();
@@ -125,6 +126,9 @@ void View::getCameraModels()
 
     // add to vector
     cam_model_.push_back(current_cam_model);
+
+    string current_camera_id = msg_->M_cam.at(i).camera_id;
+    camera_id_.push_back(current_camera_id);
   }
 }
 
@@ -212,17 +216,17 @@ void View::getFrameNames()
 
     // TODO: some frame names are hard-coded here.
     // This is a possible error in the bag file
-    if( msg_->M_cam.at(i).camera_id == "narrow_left_rect" )
+    if( camera_id_[i] == "narrow_left_rect" )
       current_frame = "narrow_stereo_l_stereo_camera_optical_frame";
-    else if( msg_->M_cam.at(i).camera_id == "narrow_right_rect" )
+    else if( camera_id_[i] == "narrow_right_rect" )
       current_frame = "narrow_stereo_r_stereo_camera_optical_frame";
-    else if( msg_->M_cam.at(i).camera_id == "wide_left_rect" )
+    else if( camera_id_[i] == "wide_left_rect" )
       current_frame = "wide_stereo_l_stereo_camera_optical_frame";
-    else if( msg_->M_cam.at(i).camera_id == "wide_right_rect" )
+    else if( camera_id_[i] == "wide_right_rect" )
       current_frame = "wide_stereo_r_stereo_camera_optical_frame";
-    else if( msg_->M_cam.at(i).camera_id == "kinect_head" )
+    else if( camera_id_[i] == "kinect_head" )
       current_frame = "head_mount_kinect_rgb_optical_frame";
-    else if( msg_->M_cam.at(i).camera_id == "prosilica_rect" )
+    else if( camera_id_[i] == "prosilica_rect" )
       current_frame = "high_def_optical_frame";
     else
     {
