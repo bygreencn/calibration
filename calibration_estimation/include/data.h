@@ -60,16 +60,22 @@ public:
   ~Data();
 
   static void setRobotState(RobotState *robot_state);
+  static void setMarkers(Markers *markers_);
 
   /// \brief Add one RobotMeasurement
-  void addMeasurement(Msg &msg);
+  void addMeasurement(const Msg &msg);
 
+  /// \brief Publish View (checkerboards, /tf, joint angles)
   void showView(std::size_t id);
 
+  /// \brief Number of views
+  std::size_t size() { return view_.size(); }
+
 // public Members
-  std::vector<View>  view_;
+  std::vector<View> view_;
 
 private:
+  /// \brief Update robot state with the measured joint angles
   void updateRobot(std::size_t id);
 
   /// \brief transform 3D using the Rotation and Translation defined in frame

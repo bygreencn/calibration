@@ -68,7 +68,8 @@ using namespace calib;
 
 // global variables
 RobotState *robot_state;
-Markers *visual_markers;
+Markers    *visual_markers;
+Data       *data;
 
 /// \brief transform 3D using the Rotation and Translation defined in frame
 void transform3DPoints(const cv::Mat &points,
@@ -494,21 +495,26 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 //   robot_state->updateTree();
 }
 
-void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
+void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::Ptr robot_measurement)
 {
-  // reset joints to zeros
-  robot_state->reset();
+//   // reset joints to zeros
+//   robot_state->reset();
+//
+//   // update joints
+//   unsigned size = robot_measurement->M_chain.size();
+//   for (unsigned i = 0; i < size; i++)
+//   {
+//     robot_state->update(robot_measurement->M_chain.at(i).chain_state.name,
+//                         robot_measurement->M_chain.at(i).chain_state.position);
+//   }
+//
+//   // show messuaremets
+//   showMessuaremets(robot_measurement);
 
-  // update joints
-  unsigned size = robot_measurement->M_chain.size();
-  for (unsigned i = 0; i < size; i++)
-  {
-    robot_state->update(robot_measurement->M_chain.at(i).chain_state.name,
-                        robot_measurement->M_chain.at(i).chain_state.position);
-  }
-
-  // show messuaremets
-  showMessuaremets(robot_measurement);
+  static int current=0;
+  data->addMeasurement(robot_measurement);
+  data->showView(current);
+  current++;
 }
 
 int main(int argc, char **argv)
@@ -561,22 +567,39 @@ int main(int argc, char **argv)
                        // 'online' method is not yet implemented
   if (offline)
   {
-    // read rosbag
-    rosbag::Bag bag(rosbag_filename);
-    rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
-    vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
-    BOOST_FOREACH(rosbag::MessageInstance const m, view)
-    {
-      calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
-      if (i != NULL)
-        msgs.push_back(i);
-    }
-    bag.close();
+    // set Data class
+    data = new Data();
+    data->setRobotState(robot_state);
+    data->setMarkers(visual_markers);
 
+    // read rosbag
+//     rosbag::Bag bag(rosbag_filename);
+//     rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
+//     vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
+//     BOOST_FOREACH(rosbag::MessageInstance const m, view)
+//     {
+//       calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
+//       if (i != NULL)
+//       {
+// //         msgs.push_back(i);
+//         data.addMeasurement(i);
+//       }
+//     }
+//     bag.close();
+
+
+    // show views
+//     size_t size = data.size();
+//     for (size_t i=0; i<size; i++)
+//     {
+//       data.showView(i);
+//       sleep(1);
+//     }
 
     // Optimization
     Optimization optimazer;
     optimazer.setRobotState(robot_state);
+//     optimazer.setData(data);
     optimazer.setMarkers(visual_markers);
     optimazer.run();
   }

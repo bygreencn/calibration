@@ -64,7 +64,12 @@ void Data::setRobotState(RobotState *robot_state)
   View::setRobotState(robot_state_);
 }
 
-void Data::addMeasurement(Msg &msg)
+void Data::setMarkers(Markers *markers)
+{
+  markers_ = markers;
+}
+
+void Data::addMeasurement(const Msg &msg)
 {
   // set and generate view from message
   View current_view;
@@ -78,23 +83,35 @@ void Data::showView(std::size_t id)
 {
   if (id < view_.size())
   {
+    markers_->reset();
     updateRobot(id);
     View &current_view = view_[id];
+
+    cout << "View: " << id << endl;
 
     size_t size = current_view.frame_name_.size();
     for (size_t i = 0; i < size; i++)
     {
-      // Send points to base_footprint
-      Mat modif_points;
+      // points to base_footprint (new_points)
+      Mat new_points;
       apply_transform(current_view.board_transformed_pts_3D_[i],
                       current_view.frame_name_[i],
                       "base_footprint",
-                      &modif_points);
+                      &new_points);
 
-      markers_->addMarkers(modif_points,
+      // add new_points to markers_
+      markers_->addMarkers(new_points,
                            current_view.camera_id_[i],
                            "base_footprint",
                            chooseColor(i));
+
+      // show stats
+      cout << "i:" << i
+           << " --  camera: " << current_view.camera_id_[i] << endl;
+      cout << "\tcam_model.tfFrame(): "  << current_view.frame_name_[i] << endl;
+      cout << "\tReproj. err = "  << current_view.error_[i] << endl;
+      cout << "\trvec = " << current_view.rvec_[i] << endl;
+      cout << "\ttvec = "  << current_view.tvec_[i] << endl << endl;
     }
   }
 }

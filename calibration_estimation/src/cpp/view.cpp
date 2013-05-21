@@ -64,12 +64,12 @@ void View::setRobotState(RobotState *robot_state)
   robot_state_ = robot_state;
 }
 
-bool View::generateView(Msg &msg)
+bool View::generateView(const Msg &msg)
 {
   // copy message (this class is a container)
   msg_ = msg;
 
-  if (robot_state_ == 0)
+  if (robot_state_ != 0)
   {
     updateRobot();
     generateCorners();
@@ -95,7 +95,7 @@ void View::updateRobot()
   View::robot_state_->reset();
 
   // update joints
-  size_t size = msg_->M_cam.size();
+  size_t size = msg_->M_chain.size();
   for (size_t i = 0; i < size; i++)
   {
     View::robot_state_->update(msg_->M_chain.at(i).chain_state.name,

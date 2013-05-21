@@ -121,11 +121,11 @@ void Markers::addMarkers(const cv::Mat &board_measured_pts_3D,
 }
 
 void Markers::setMarkers(const int id,        // needed for MarkerArray
-                const string &ns,
-                const string &frame,
-                visualization_msgs::Marker *marker,
-                const Scalar &color, // Scalar(B,G,R)
-                const double &scale)
+                         const string &ns,
+                         const string &frame,
+                         visualization_msgs::Marker *marker,
+                         const Scalar &color, // Scalar(B,G,R)
+                         const double &scale)
 {
   marker->id = id;
   marker->ns = ns;  // hack which allows to select the camera in RViz

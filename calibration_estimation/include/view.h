@@ -70,7 +70,7 @@ public:
   static void setRobotState(RobotState *robot_state);
 
   /// \brief Generate View from RobotMeasurement Message
-  bool generateView(Msg &msg);
+  bool generateView(const Msg &msg);
 
   /// \brief Update robot state with the measured joint angles
   void updateRobot();

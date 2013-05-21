@@ -93,7 +93,7 @@ private:
 
   visualization_msgs::MarkerArray marker_array_;
 
-  unsigned current_id_; // using same id override previous markers
+  std::size_t current_id_; // using same id override previous markers
 };
 
 
