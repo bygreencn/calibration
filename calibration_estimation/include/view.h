@@ -80,7 +80,7 @@ public:
   Msg msg_;  // most of the remainig public members are generated from msg_
 
   Points3D              board_model_pts_3D_;       // generateCorners
-  std::vector<Points3D> board_transformed_pts_3D_; // Cb corners in camera frame
+  std::vector<cv::Mat>  board_transformed_pts_3D_; // Cb corners in camera frame
   std::vector<Points2D> measured_pts_2D_;          // getMeasurement
 
   std::vector<Points2D> expected_pts_2D_;          // findCbPoses
