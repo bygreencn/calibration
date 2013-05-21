@@ -70,17 +70,6 @@ using namespace calib;
 RobotState *robot_state;
 Markers *visual_markers;
 
-#define NUM_COLORS 8
-Scalar colors[NUM_COLORS] = {
-  Scalar(255,0,0),     Scalar(0,255,0),   Scalar(0,0,255),
-  Scalar(255,255,0),   Scalar(255,0,255), Scalar(0,255,255),
-  Scalar(255,255,255), Scalar(0,0,0)
-};
-
-/// \brief Select a color randomly
-inline Scalar chooseRandomColor() { return colors[rand() % NUM_COLORS]; }
-inline Scalar chooseColor(int i)  { return colors[i % NUM_COLORS]; }
-
 /// \brief transform 3D using the Rotation and Translation defined in frame
 void transform3DPoints(const cv::Mat &points,
                        const string &frame,

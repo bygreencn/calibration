@@ -43,6 +43,18 @@ using namespace cv;
 namespace calib
 {
 
+#define NUM_COLORS 8
+
+cv::Scalar colors[NUM_COLORS] = {
+  cv::Scalar(255,0,0),     cv::Scalar(0,255,0),   cv::Scalar(0,0,255),
+  cv::Scalar(255,255,0),   cv::Scalar(255,0,255), cv::Scalar(0,255,255),
+  cv::Scalar(255,255,255), cv::Scalar(0,0,0)
+};
+
+cv::Scalar chooseRandomColor() { return colors[rand() % NUM_COLORS]; }
+cv::Scalar chooseColor(int i)  { return colors[i % NUM_COLORS]; }
+
+
 Markers::Markers() : current_id_(0)
 {
   publisher_ = nh_.advertise<visualization_msgs::MarkerArray>( "visualization_marker_array", 0 );

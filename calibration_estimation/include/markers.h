@@ -47,6 +47,10 @@
 namespace calib
 {
 
+/// \brief Select a color randomly
+cv::Scalar chooseRandomColor();
+cv::Scalar chooseColor(int i);
+
 class Markers
 {
 public:
