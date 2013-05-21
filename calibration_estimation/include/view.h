@@ -41,12 +41,14 @@
 #include <opencv2/core/core.hpp>
 #include <image_geometry/pinhole_camera_model.h>
 // #include <image_geometry/stereo_camera_model.h>
+#include <kdl/frames.hpp>
 
 #include "calibration_msgs/RobotMeasurement.h"
-#include "robot_state.h"
 
 namespace calib
 {
+
+class RobotState;
 
 typedef calibration_msgs::RobotMeasurement::Ptr Msg;
 
@@ -65,22 +67,26 @@ public:
   View();
   ~View();
 
-  void setRobotState(RobotState *robot_state);
+  static void setRobotState(RobotState *robot_state);
 
   /// \brief Generate View from RobotMeasurement Message
   bool generateView(Msg &msg);
 
+  /// \brief Update robot state with the measured joint angles
+  void updateRobot();
 
-// public Members
-  Msg msg_;  // most of the rest public member are generated from msg_
 
-  Points3D              board_model_pts_3D_;  // generateCorners
-  std::vector<Points2D> measured_pts_2D_;     // getMeasurement
+// Public Members
+  Msg msg_;  // most of the remainig public members are generated from msg_
 
-  std::vector<Points2D> expected_pts_2D_;     // findCbPoses
-  std::vector<double>   error_;               // findCbPoses
-  std::vector<cv::Mat>  rvec_;                // findCbPoses
-  std::vector<cv::Mat>  tvec_;                // findCbPoses
+  Points3D              board_model_pts_3D_;       // generateCorners
+  std::vector<Points3D> board_transformed_pts_3D_; // Cb corners in camera frame
+  std::vector<Points2D> measured_pts_2D_;          // getMeasurement
+
+  std::vector<Points2D> expected_pts_2D_;          // findCbPoses
+  std::vector<double>   error_;                    // findCbPoses
+  std::vector<cv::Mat>  rvec_;                     // findCbPoses
+  std::vector<cv::Mat>  tvec_;                     // findCbPoses
 
   std::vector<image_geometry::PinholeCameraModel> cam_model_;
 //   unsigned cam_number_;  cam_model_.size()
@@ -105,6 +111,9 @@ private:
   /// \brief Find chessboard poses using solvePnP
   void findCbPoses();
 
+  /// \brief Get board model points in the 'camera frame' sing solvePnP result
+  void getTransformedPoints();
+
   /// \brief Get camera name frame from Message
   void getFrameNames();
 
@@ -112,7 +121,9 @@ private:
   void getPoses();
 
 
-  RobotState *robot_state_; // it is needed in order to calculate cameras poses
+private:
+  static RobotState *robot_state_; // it is needed in order to calculate cameras
+                                   // poses. It is unique (static)
 };
 
 }

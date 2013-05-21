@@ -37,6 +37,8 @@
 #include "view.h"
 #include "chessboard.h"
 #include "conversion.h"
+#include "projection.h"
+#include "robot_state.h"
 
 #include <ros/ros.h>
 
@@ -46,9 +48,11 @@ using namespace cv;
 namespace calib
 {
 
+// Static member allocation
+RobotState *View::robot_state_ = 0;
+
 View::View()
 {
-  robot_state_ = 0;
 }
 
 View::~View()
@@ -67,10 +71,12 @@ bool View::generateView(Msg &msg)
 
   if (robot_state_ == 0)
   {
+    updateRobot();
     generateCorners();
     getCameraModels();
     getMeasurements();
     findCbPoses();
+    getTransformedPoints();
     getFrameNames();
     getPoses();
 
@@ -81,7 +87,20 @@ bool View::generateView(Msg &msg)
     ROS_ERROR("robot_state_ unset, use setRobotState()");
     return false;
   }
+}
 
+void View::updateRobot()
+{
+  // reset joints to zeros
+  View::robot_state_->reset();
+
+  // update joints
+  size_t size = msg_->M_cam.size();
+  for (size_t i = 0; i < size; i++)
+  {
+    View::robot_state_->update(msg_->M_chain.at(i).chain_state.name,
+                               msg_->M_chain.at(i).chain_state.position);
+  }
 }
 
 void View::generateCorners()
@@ -162,6 +181,23 @@ void View::findCbPoses()
     tvec_.push_back(tvec);
     expected_pts_2D_.push_back(expected_pts_2D);
     error_.push_back(error);
+  }
+}
+
+void View::getTransformedPoints()
+{
+  size_t size = cam_model_.size();
+  for (size_t i = 0; i < size; i++)
+  {
+    // Transform points
+    Mat board_transformed_pts_3D;
+    transform3DPoints(Mat(board_model_pts_3D_),
+                      rvec_[i],
+                      tvec_[i],
+                      &board_transformed_pts_3D);
+
+    // add to vector
+    board_transformed_pts_3D_.push_back(board_transformed_pts_3D);
   }
 }
 
