@@ -67,7 +67,7 @@ using namespace cv;
 using namespace calib;
 
 // global variables
-RobotStatePublisher *robot_state;
+RobotState *robot_state;
 Markers *visual_markers;
 
 #define NUM_COLORS 8
@@ -80,20 +80,6 @@ Scalar colors[NUM_COLORS] = {
 /// \brief Select a color randomly
 inline Scalar chooseRandomColor() { return colors[rand() % NUM_COLORS]; }
 inline Scalar chooseColor(int i)  { return colors[i % NUM_COLORS]; }
-
-/// \brief transform 3D using the Rotation and Translation defined in frame
-void transform3DPoints(const cv::Mat &points,
-                       const KDL::Frame &frame,
-                       cv::Mat *modif_points )
-{
-  cv::Mat R, t;
-  kdl2cv(frame, R, t);
-
-  Mat transformation;
-  cv::hconcat(R, t, transformation);
-
-  transform(points, *modif_points, transformation);
-}
 
 /// \brief transform 3D using the Rotation and Translation defined in frame
 void transform3DPoints(const cv::Mat &points,
@@ -553,8 +539,14 @@ int main(int argc, char **argv)
 //   else
 //     output->SaveFile("urdf_calibrated.xml");
 
-  // robot init
-  robot_state = new RobotStatePublisher();
+  // create robot
+  bool publising = true;  // true by default. It will publish /tf
+  if (publising)
+    robot_state = new RobotStatePublisher();
+  else
+    robot_state = new RobotState();
+
+  // init robot from urdf
   robot_state->initFromURDF(model);
 
   // create node
@@ -576,29 +568,31 @@ int main(int argc, char **argv)
     return false;
   }
 
-  // read rosbag
-  rosbag::Bag bag(rosbag_filename);
-  rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
-  vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
-  BOOST_FOREACH(rosbag::MessageInstance const m, view)
+  bool offline = true; // offline by default (using bag file)
+                       // 'online' method is not yet implemented
+  if (offline)
   {
-    calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
-    if (i != NULL)
-      msgs.push_back(i);
+    // read rosbag
+    rosbag::Bag bag(rosbag_filename);
+    rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
+    vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
+    BOOST_FOREACH(rosbag::MessageInstance const m, view)
+    {
+      calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
+      if (i != NULL)
+        msgs.push_back(i);
+    }
+    bag.close();
+
+
+    // Optimization
+    Optimization optimazer;
+    optimazer.setRobotState(robot_state);
+    optimazer.setMarkers(visual_markers);
+    optimazer.run();
   }
-  bag.close();
-
-
-  // Optimization
-  Optimization optimazer;
-  optimazer.setRobotState(robot_state);
-  optimazer.setBagData(&msgs);
-  optimazer.setMarkers(visual_markers);
-  optimazer.run();
-
 
   ros::spin();
 
-//   delete robot_st_publisher;
   return 0;
 }
