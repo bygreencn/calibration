@@ -142,4 +142,17 @@ void transform3DPoints(const Mat &points,
   transform(points, *modif_points, transformation);
 }
 
+void transform3DPoints(const cv::Mat &points,
+                       const KDL::Frame &frame,
+                       cv::Mat *modif_points)
+{
+  cv::Mat R, t;
+  kdl2cv(frame, R, t);
+
+  Mat transformation;
+  cv::hconcat(R, t, transformation);
+
+  transform(points, *modif_points, transformation);
+}
+
 }

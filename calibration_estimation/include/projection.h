@@ -40,6 +40,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <image_geometry/pinhole_camera_model.h>
+#include <kdl/frames.hpp>
 
 namespace calib
 {
@@ -69,7 +70,10 @@ void transform3DPoints(const cv::Mat &points,
                        const cv::Mat &tvec,
                        cv::Mat *modif_points );
 
+/// \brief transform 3D using the Rotation and Translation defined in frame
+void transform3DPoints(const cv::Mat &points,
+                       const KDL::Frame &frame,
+                       cv::Mat *modif_points);
 }
 
 #endif // PROJECTION_H
-
