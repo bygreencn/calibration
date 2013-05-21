@@ -84,23 +84,17 @@ void Data::showView(std::size_t id)
     size_t size = current_view.frame_name_.size();
     for (size_t i = 0; i < size; i++)
     {
-      // board_transformed_pts_3D
-      Mat board_transformed_pts_3D;
-      transform3DPoints(Mat(current_view.board_model_pts_3D_),
-                        current_view.rvec_[i],
-                        current_view.tvec_[i],
-                        &board_transformed_pts_3D);
-
+      // Send points to base_footprint
       Mat modif_points;
-      apply_transform(board_transformed_pts_3D,
+      apply_transform(current_view.board_transformed_pts_3D_[i],
                       current_view.frame_name_[i],
                       "base_footprint",
                       &modif_points);
 
-//       visual_markers->addMarkers(modif_points,
-//                                 robot_measurement->M_cam.at(i).camera_id,
-//                                 "base_footprint",
-//                                 chooseColor(i));
+      markers_->addMarkers(modif_points,
+                           current_view.camera_id_[i],
+                           "base_footprint",
+                           chooseColor(i));
     }
   }
 }
