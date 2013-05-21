@@ -64,7 +64,7 @@ public:
   /// \brief Add markers to publish
   void addMarkers(const cv::Mat &board_measured_pts_3D,
                   const std::string &ns,
-                  const std::string frame,
+                  const std::string &frame,
                   const cv::Scalar &color);
 
   /// \brief Publish markers

@@ -108,7 +108,7 @@ void Markers::puslish(const ros::TimerEvent &e)
 
 void Markers::addMarkers(const cv::Mat &board_measured_pts_3D,
                          const std::string &ns,
-                         const std::string frame,
+                         const std::string &frame,
                          const cv::Scalar &color)
 {
   visualization_msgs::Marker marker;
