@@ -76,8 +76,6 @@ void Markers::reset()
 
 void Markers::resetTime()
 {
-  // Working around RViz bug, it doesn't delete some points of previous markers
-  // if the number of checherboards are less
   for (int i = 0; i < marker_array_.markers.size(); i++)
   {
     marker_array_.markers[i].header.stamp = ros::Time();
