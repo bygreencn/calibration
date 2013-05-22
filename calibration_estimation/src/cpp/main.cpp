@@ -552,7 +552,7 @@ int main(int argc, char **argv)
                                                        robotMeasurementCallback);
 
   // visualization marker publisher
-  visual_markers = new Markers;
+  visual_markers = new Markers();
 
 
   // read bag filename from param
@@ -573,34 +573,46 @@ int main(int argc, char **argv)
     data->setMarkers(visual_markers);
 
     // read rosbag
-//     rosbag::Bag bag(rosbag_filename);
-//     rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
-//     vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
-//     BOOST_FOREACH(rosbag::MessageInstance const m, view)
-//     {
-//       calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
-//       if (i != NULL)
-//       {
-// //         msgs.push_back(i);
-//         data.addMeasurement(i);
-//       }
-//     }
-//     bag.close();
+    rosbag::Bag bag(rosbag_filename);
+    rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
+    vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
+    BOOST_FOREACH(rosbag::MessageInstance const m, view)
+    {
+      calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
+      if (i != NULL)
+      {
+        data->addMeasurement(i);
+      }
+    }
+    bag.close();
 
 
     // show views
-//     size_t size = data.size();
+//     size_t size = data->size();
 //     for (size_t i=0; i<size; i++)
 //     {
-//       data.showView(i);
-//       sleep(1);
+//       data->showView(i);
+//       ros::spinOnce();
+//       ros::Duration(0.5).sleep(); // sleep
 //     }
+
+
+    // Choose cameras to be calibrated
+    std::vector<std::string> camera_frames;
+    camera_frames.clear();
+    camera_frames.push_back("narrow_stereo_l_stereo_camera_optical_frame"); // [I|0]
+    camera_frames.push_back("narrow_stereo_r_stereo_camera_optical_frame");
+    camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
+    camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
+    camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
+    camera_frames.push_back("high_def_optical_frame");
 
     // Optimization
     Optimization optimazer;
     optimazer.setRobotState(robot_state);
-//     optimazer.setData(data);
     optimazer.setMarkers(visual_markers);
+    optimazer.setData(data);
+    optimazer.setCamerasCalib(camera_frames);
     optimazer.run();
   }
 

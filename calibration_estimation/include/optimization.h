@@ -38,23 +38,14 @@
 #ifndef OPTIMIZATION_H
 #define OPTIMIZATION_H
 
-
-#include "calibration_msgs/RobotMeasurement.h"
-
 #include "data.h"
-#include "auxiliar.h"
-#include "conversion.h"
-#include "joint_state.h"
-#include "markers.h"
-#include "projection.h"
-#include "robot_state.h"
-#include "robot_state_publisher.h"
-#include "calibration_msgs/RobotMeasurement.h"
+#include "cost_functions.h"
 
 namespace calib
 {
 
 class RobotState;
+class Markers;
 
 class Optimization
 {
@@ -65,20 +56,32 @@ public:
   /// \brief Set optimizer funtions
   void setRobotState(RobotState *robot_state);
   void setMarkers(Markers *markers);
+  void setData(Data *data);
+
+  /// \brief Set vector of 'cameras_id' to be calibrated
+  void setCamerasCalib(const std::vector<std::string> &cameras);
 
   /// \brief Check is the state is valid
   bool valid();
 
+  /// \brief Run optimization process
   void run();
 
-//   run();
-//   void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement);
-  void showMeasurement(std::size_t id);
+private:
+  void initialization();
 
 private:
-  RobotState        *robot_state_;
-  std::vector<View>  view_;
-  Markers           *markers_;
+  RobotState *robot_state_;
+  Markers    *markers_;
+  Data       *data_;
+
+  std::vector<std::string> cameras_;  // camera to be calibrated
+
+  ceres::Problem problem_;
+
+  std::vector<std::vector<double *> > param_point_3D_;
+  std::vector<double *>               param_camera_rot_;
+  std::vector<double *>               param_camera_trans_;
 };
 
 }

@@ -36,7 +36,10 @@
 
 #include "optimization.h"
 #include "robot_state.h"
-#include "chessboard.h"
+#include "markers.h"
+#include "conversion.h"
+
+#include "auxiliar.h"
 
 #include <ros/ros.h>
 #include <opencv2/calib3d/calib3d.hpp>
@@ -51,6 +54,8 @@ Optimization::Optimization()
 {
   robot_state_ = 0;
   markers_ = 0;
+  data_ = 0;
+  cameras_.clear();
 }
 
 Optimization::~Optimization()
@@ -67,9 +72,21 @@ void Optimization::setMarkers(Markers *markers)
   markers_ = markers;
 }
 
+void Optimization::setData(Data *data)
+{
+  data_        = data;
+//   robot_state_ = Data::robot_state_;
+//   markers_     = Data::markers_;
+}
+
+void Optimization::setCamerasCalib(const std::vector<std::string> &cameras)
+{
+  cameras_ = cameras;
+}
+
 bool Optimization::valid()
 {
-  return robot_state_ != 0 && markers_ != 0;
+  return robot_state_ != 0 && markers_ != 0 && data_ != 0;
 }
 
 void Optimization::run()
@@ -80,9 +97,77 @@ void Optimization::run()
     ROS_ERROR("The optimazer data is not complete");
     return;
   }
+
+  // v: view index
+  // c: camera index
+  size_t v=3;
+//   for (size_t v = 0; v < data_->size(); v++)
+  {
+//     View &current_view = data_->view_[v];
+//
+//     KDL::Frame T0; // (camera '0' KDL::Frame to robot)
+//     for (size_t c = 0; c < cameras_.size(); c++)
+//     {
+//       string current_camera_id = cameras_[c];
+//
+// //       PRINT(current_camera_id);
+// //       cout << "current_view.camera_id_: " << current_view.camera_id_ << endl;
+//
+//       if(c==0)
+//       {
+//
+//         // First camera is the refence, most be in the view
+//         if( !current_view.isVisible(current_camera_id) )
+//           break;
+//
+//         int cam_idx = current_view.getCamIdx(current_camera_id);
+//         T0 = current_view.pose_father_[cam_idx] * current_view.pose_rel_[cam_idx];
+//       }
+//       else
+//       {
+//         if( !current_view.isVisible(current_camera_id) )
+//           continue;
+//       }
+//
+//       int cam_idx = current_view.getCamIdx(current_camera_id);
+//       KDL::Frame Ti = current_view.pose_father_[cam_idx] * current_view.pose_rel_[cam_idx];
+//       KDL::Frame current_position = (Ti).Inverse() * T0;
+//     }
+  }
+}
+
+void Optimization::initialization()
+{
+  KDL::Frame T0;
+  // robot_state_->reset(); // not needed, rigid relationship between the cameras
+  for (int c = 0; c < cameras_.size(); c++)
+  {
+    // get relative pose (camera to its father)
+    KDL::Frame pose_rel;
+    robot_state_->getRelativePose(cameras_[c], &pose_rel);
+    const string link_root = robot_state_->getLinkRoot(cameras_[c]);
+
+    // get father pose (father to tree root)
+    KDL::Frame pose_father;
+    robot_state_->getFK(link_root, &pose_father);
+
+    if (c == 0)
+    {
+      T0 = pose_father * pose_rel;
+    }
+
+    KDL::Frame Ti = pose_father * pose_rel;
+    KDL::Frame current_position = Ti.Inverse() * T0;
+
+    // generate cameras
+    double *camera_rot = new double[4];
+    serialize(current_position.M, camera_rot);
+    param_camera_rot_.push_back(camera_rot);
+
+    double *camera_trans = new double[3];
+    serialize(current_position.p, camera_trans);
+    param_camera_trans_.push_back(camera_trans);
+  }
 }
 
 }
-
-
-
