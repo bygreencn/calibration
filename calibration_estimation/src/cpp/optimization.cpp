@@ -138,28 +138,22 @@ void Optimization::run()
 
 void Optimization::initialization()
 {
-  KDL::Frame T0;
+  KDL::Frame T0, current_position;
   // robot_state_->reset(); // not needed, rigid relationship between the cameras
   for (int c = 0; c < cameras_.size(); c++)
   {
-    // get relative pose (camera to its father)
-    KDL::Frame pose_rel;
-    robot_state_->getRelativePose(cameras_[c], &pose_rel);
-    const string link_root = robot_state_->getLinkRoot(cameras_[c]);
+    // get camera pose (camera to robot root)
+    KDL::Frame Ti;
+    robot_state_->getFK(cameras_[c], &Ti);
 
-    // get father pose (father to tree root)
-    KDL::Frame pose_father;
-    robot_state_->getFK(link_root, &pose_father);
-
+    // Initial camera
     if (c == 0)
-    {
-      T0 = pose_father * pose_rel;
-    }
+      T0 = Ti;
 
-    KDL::Frame Ti = pose_father * pose_rel;
-    KDL::Frame current_position = Ti.Inverse() * T0;
+    // getting [R\t]
+    current_position = Ti.Inverse() * T0;
 
-    // generate cameras
+    // generate cameras in doubles
     double *camera_rot = new double[4];
     serialize(current_position.M, camera_rot);
     param_camera_rot_.push_back(camera_rot);
