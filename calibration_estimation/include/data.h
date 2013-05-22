@@ -66,6 +66,7 @@ public:
 
   /// \brief Publish View (checkerboards, /tf, joint angles)
   void showView(std::size_t id);
+  void showView(std::size_t id, const std::vector<std::string> &camera_frames);
 
   /// \brief Number of views
   std::size_t size() { return view_.size(); }

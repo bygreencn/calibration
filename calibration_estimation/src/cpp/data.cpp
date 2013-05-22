@@ -83,35 +83,50 @@ void Data::showView(std::size_t id)
 {
   if (id < view_.size())
   {
+    View &current_view = view_[id];
+    showView(id, current_view.frame_name_);
+  }
+}
+
+void Data::showView(std::size_t id, const vector<string> &camera_frames)
+{
+  if (id < view_.size())
+  {
     markers_->reset();
     updateRobot(id);
     View &current_view = view_[id];
 
     cout << "View: " << id << endl;
 
-    size_t size = current_view.frame_name_.size();
+    size_t size = camera_frames.size();
     for (size_t i = 0; i < size; i++)
     {
+      // get camera index
+      int cam_idx = current_view.getCamIdx(camera_frames[i]);
+      if (cam_idx < 0)
+        continue;
+
       // points to base_footprint (new_points)
       Mat new_points;
-      apply_transform(current_view.board_transformed_pts_3D_[i],
-                      current_view.frame_name_[i],
+      apply_transform(current_view.board_transformed_pts_3D_[cam_idx],
+                      camera_frames[i],
                       "base_footprint",
                       &new_points);
 
       // add new_points to markers_
       markers_->addMarkers(new_points,
-                           current_view.camera_id_[i],
+                           current_view.camera_id_[cam_idx],
                            "base_footprint",
                            chooseColor(i));
 
       // show stats
       cout << "i:" << i
-           << " --  camera: " << current_view.camera_id_[i] << endl;
-      cout << "\tcam_model.tfFrame(): "  << current_view.frame_name_[i] << endl;
-      cout << "\tReproj. err = "  << current_view.error_[i] << endl;
-      cout << "\trvec = " << current_view.rvec_[i] << endl;
-      cout << "\ttvec = "  << current_view.tvec_[i] << endl << endl;
+           << " --  camera: "           << current_view.camera_id_[cam_idx] << endl;
+      cout << "\tcam_model.tfFrame(): " << current_view.frame_name_[cam_idx] << endl;
+      cout << "\tReproj. error = "      << current_view.error_[cam_idx] << endl;
+      cout << "\tAveg. error = "        << current_view.error_[cam_idx] / current_view.board_model_pts_3D_.size() << endl;
+      cout << "\trvec = "               << current_view.rvec_[cam_idx] << endl;
+      cout << "\ttvec = "               << current_view.tvec_[cam_idx] << endl << endl;
     }
   }
 }
