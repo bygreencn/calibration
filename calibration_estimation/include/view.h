@@ -76,11 +76,10 @@ public:
   void updateRobot();
 
   /// \brief True if the camera is part of the view (frame name belongs to frame_name_)
-  bool isVisible(const std::string &camera_id);
+  bool isVisible(const std::string &camera_frame);
 
-  /// \brief Return the camera index (position in the vectors)
-  /// (similar to frame_id, but for camera_id)
-  int getCamIdx(const std::string &camera_id);
+  /// \brief Return the camera index (frame_id_)
+  int getCamIdx(const std::string &camera_frame);
 
 
 // Public Members

@@ -103,17 +103,16 @@ void View::updateRobot()
   }
 }
 
-bool View::isVisible(const std::string &camera)
+bool View::isVisible(const std::string &camera_frame)
 {
-  return find(camera_id_.begin(), camera_id_.end(), camera) != camera_id_.end();
+  return find(frame_name_.begin(), frame_name_.end(), camera_frame) != frame_name_.end();
 }
 
-int View::getCamIdx(const std::string &camera_id)
+int View::getCamIdx(const std::string &camera_frame)
 {
-  if( isVisible(camera_id))
+  if( isVisible(camera_frame))
   {
-    string frame_name = camera_to_frame_[camera_id];
-    return frame_id_[frame_name];
+    return frame_id_[camera_frame];
   }
   else
   {
