@@ -108,6 +108,20 @@ bool View::isVisible(const std::string &camera)
   return find(camera_id_.begin(), camera_id_.end(), camera) != camera_id_.end();
 }
 
+int View::getCamIdx(const std::string &camera_id)
+{
+  if( isVisible(camera_id))
+  {
+    string frame_name = camera_to_frame_[camera_id];
+    return frame_id_[frame_name];
+  }
+  else
+  {
+    ROS_ERROR("camera_id does not exist");
+    return -1;
+  }
+}
+
 void View::generateCorners()
 {
   ChessBoard cb;

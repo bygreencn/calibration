@@ -76,29 +76,34 @@ public:
   void updateRobot();
 
   /// \brief True if the camera is part of the view (frame name belongs to frame_name_)
-  bool isVisible(const std::string &camera_frame);
+  bool isVisible(const std::string &camera_id);
+
+  /// \brief Return the camera index (position in the vectors)
+  /// (similar to frame_id, but for camera_id)
+  int getCamIdx(const std::string &camera_id);
+
 
 // Public Members
-  Msg msg_;  // most of the remainig public members are generated from msg_
+  Msg msg_;                  // Remaining public members are generated from msg_
 
-  Points3D              board_model_pts_3D_;       // generateCorners
-  std::vector<cv::Mat>  board_transformed_pts_3D_; // Cb corners in camera frame
-  std::vector<Points2D> measured_pts_2D_;          // getMeasurement
+  Points3D              board_model_pts_3D_;       // generateCorners()
+  std::vector<cv::Mat>  board_transformed_pts_3D_; // getTransformedPoints()
+  std::vector<Points2D> measured_pts_2D_;          // getMeasurement()
 
-  std::vector<Points2D> expected_pts_2D_;          // findCbPoses
-  std::vector<double>   error_;                    // findCbPoses
-  std::vector<cv::Mat>  rvec_;                     // findCbPoses
-  std::vector<cv::Mat>  tvec_;                     // findCbPoses
+  std::vector<Points2D> expected_pts_2D_;          // findCbPoses()
+  std::vector<double>   error_;                    // findCbPoses()
+  std::vector<cv::Mat>  rvec_;                     // findCbPoses()
+  std::vector<cv::Mat>  tvec_;                     // findCbPoses()
 
-  std::vector<image_geometry::PinholeCameraModel> cam_model_;
-  std::vector<std::string>                        camera_id_;
+  std::vector<image_geometry::PinholeCameraModel> cam_model_; // getCameraModels()
+  std::vector<std::string>                        camera_id_; // getFrameNames()
   std::map<std::string, std::string>              camera_to_frame_; // camera_ids -> frame_name
 //   unsigned cam_number_;  cam_model_.size()
 
-  std::vector<std::string>           frame_name_;
-  std::map<std::string, std::size_t> frame_id_;   // frame_name -> frame_id
+  std::vector<std::string>           frame_name_;  // getFrameNames()
+  std::map<std::string, std::size_t> frame_id_;    // frame_name -> frame_id
 
-  std::vector<KDL::Frame> pose_rel_, pose_father_;
+  std::vector<KDL::Frame> pose_rel_, pose_father_; // getPoses()
 //   KDL::Frame T0; // T0 == pose_father_[0]*pose_rel_[0]
 
 
@@ -115,7 +120,7 @@ private:
   /// \brief Find chessboard poses using solvePnP
   void findCbPoses();
 
-  /// \brief Get board model points in the 'camera frame' sing solvePnP result
+  /// \brief Get board model points in the 'camera frame' using solvePnP result
   void getTransformedPoints();
 
   /// \brief Get camera name frame from Message
