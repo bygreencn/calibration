@@ -69,6 +69,9 @@ public:
 
 private:
   void initialization();
+  void addResiduals();
+  void solver();
+  void updateParam();
 
 private:
   RobotState *robot_state_;

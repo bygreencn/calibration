@@ -98,46 +98,17 @@ void Optimization::run()
     return;
   }
 
-  // v: view index
-  // c: camera index
-  size_t v=3;
-//   for (size_t v = 0; v < data_->size(); v++)
-  {
-//     View &current_view = data_->view_[v];
-//
-//     KDL::Frame T0; // (camera '0' KDL::Frame to robot)
-//     for (size_t c = 0; c < cameras_.size(); c++)
-//     {
-//       string current_camera_id = cameras_[c];
-//
-// //       PRINT(current_camera_id);
-// //       cout << "current_view.camera_id_: " << current_view.camera_id_ << endl;
-//
-//       if(c==0)
-//       {
-//
-//         // First camera is the refence, most be in the view
-//         if( !current_view.isVisible(current_camera_id) )
-//           break;
-//
-//         int cam_idx = current_view.getCamIdx(current_camera_id);
-//         T0 = current_view.pose_father_[cam_idx] * current_view.pose_rel_[cam_idx];
-//       }
-//       else
-//       {
-//         if( !current_view.isVisible(current_camera_id) )
-//           continue;
-//       }
-//
-//       int cam_idx = current_view.getCamIdx(current_camera_id);
-//       KDL::Frame Ti = current_view.pose_father_[cam_idx] * current_view.pose_rel_[cam_idx];
-//       KDL::Frame current_position = (Ti).Inverse() * T0;
-//     }
-  }
+  initialization();
+  addResiduals();
+  solver();
+  updateParam();
 }
 
 void Optimization::initialization()
 {
+  param_camera_rot_.clear();
+  param_camera_trans_.clear();
+
   KDL::Frame T0, current_position;
   // robot_state_->reset(); // not needed, rigid relationship between the cameras
   for (int c = 0; c < cameras_.size(); c++)
@@ -164,4 +135,148 @@ void Optimization::initialization()
   }
 }
 
+void Optimization::addResiduals()
+{
+  // v: view index
+  // i: camera index
+  // j: points
+  for (size_t v = 0; v < data_->size(); v++)
+  {
+    View &current_view = data_->view_[v];
+
+    vector<double *> param_point_3D;
+
+    for (size_t i = 0; i < cameras_.size(); i++)
+    {
+      string cam_frame = cameras_[i];
+
+      if (i == 0)
+      {
+        // First camera is the reference, most be in the view
+        if (!current_view.isVisible(cam_frame))
+          break;
+
+        // serialize 3D points (board points in frame 0)
+        int cam_idx = current_view.getCamIdx(cam_frame);
+        Mat board_pts_frame0 = current_view.board_transformed_pts_3D_[cam_idx];
+        serialize(board_pts_frame0, &param_point_3D);
+      }
+      else
+      {
+        if (!current_view.isVisible(cam_frame))
+          continue;
+      }
+
+      // get measured_pts_2D and intrinsicMatrix
+      int cam_idx = current_view.getCamIdx(cam_frame);
+      vector<Point2d> &measured_pts_2D = current_view.measured_pts_2D_[cam_idx];
+      Matx33d intrinsicMatrix = current_view.cam_model_[cam_idx].intrinsicMatrix();
+
+
+      // feed optimazer with data
+      for (int j = 0; j < measured_pts_2D.size(); j++)
+      {
+        ceres::CostFunction *cost_function =
+          ReprojectionErrorWithQuaternions2::Create(measured_pts_2D[j].x,
+                                                    measured_pts_2D[j].y,
+                                                    intrinsicMatrix(0,0),
+                                                    intrinsicMatrix(1,1),
+                                                    intrinsicMatrix(0,2),
+                                                    intrinsicMatrix(1,2),
+                                                    param_point_3D[j]
+                                                    );
+
+        problem_.AddResidualBlock(cost_function,
+                                  NULL,                      // squared loss
+                                  param_camera_rot_[i],      // camera_rot i
+                                  param_camera_trans_[i]     // camera_trans i
+                                  );                         // point j (constant?)
+      }
+
+      // first camera is constanst: [I|0]
+      if (i == 0)
+      {
+        problem_.SetParameterBlockConstant(param_camera_rot_[0]);
+        problem_.SetParameterBlockConstant(param_camera_trans_[0]);
+      }
+    }
+  }
 }
+
+void Optimization::solver()
+{
+  // run solver
+  for (size_t i = 0; i < cameras_.size(); i++)
+  {
+    print_array(param_camera_rot_[i], 4,   "param_camera[i]:");
+    print_array(param_camera_trans_[i], 3, "               :");
+  }
+
+  ceres::Solver::Options options;
+  options.linear_solver_type = ceres::DENSE_SCHUR;
+  options.minimizer_progress_to_stdout = true;
+//   options.minimizer_progress_to_stdout = false;
+
+  ceres::Solver::Summary summary;
+  ceres::Solve(options, &problem_, &summary);
+  std::cout << summary.FullReport() << "\n";
+  cout << "\n";
+
+  for (size_t i = 0; i < cameras_.size(); i++)
+  {
+    print_array(param_camera_rot_[i],   4, "param_camera[i]:");
+    print_array(param_camera_trans_[i], 3, "               :");
+  }
+}
+
+void Optimization::updateParam()
+{
+  // get camera '0' (KDL::Frame to robot)
+  KDL::Frame T0;
+  robot_state_->getFK(cameras_[0], &T0);
+
+
+  // i=1 (update all cameras except the first one)
+  for (size_t i = 1; i < cameras_.size(); i++)
+  {
+    KDL::Frame frame;
+    double *camera_rot = param_camera_rot_[i];
+    double *camera_trans = param_camera_trans_[i];
+    frame.M.Quaternion(camera_rot[0],
+                       camera_rot[1],
+                       camera_rot[2],
+                       camera_rot[3]);
+
+    frame.p.data[0] = camera_trans[0];
+    frame.p.data[1] = camera_trans[1];
+    frame.p.data[2] = camera_trans[2];
+
+
+
+    // get father pose (father to tree root)
+    const string link_root = robot_state_->getLinkRoot(cameras_[i]);
+    KDL::Frame pose_father;
+    robot_state_->getFK(link_root, &pose_father);
+
+    // get cameras: [R\t]
+    KDL::Frame current_position = pose_father.Inverse() * T0 * frame.Inverse();
+    urdf::Pose pose;
+    kdl2urdf(current_position, &pose);
+    robot_state_->setUrdfPose(cameras_[i], pose);
+  }
+
+//   data_->showView(v);
+
+  sleep(1);
+  robot_state_->updateTree();
+
+  // updateView
+//   for (int i=0; i<data_->view_.size();i++)
+//     data_->view_[i].updateView();
+
+  // TODO: delete this
+  data_->showView(8, cameras_);
+}
+
+}
+

@@ -497,24 +497,24 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::Ptr robot_measurement)
 {
-//   // reset joints to zeros
-//   robot_state->reset();
-//
-//   // update joints
-//   unsigned size = robot_measurement->M_chain.size();
-//   for (unsigned i = 0; i < size; i++)
-//   {
-//     robot_state->update(robot_measurement->M_chain.at(i).chain_state.name,
-//                         robot_measurement->M_chain.at(i).chain_state.position);
-//   }
-//
-//   // show messuaremets
-//   showMessuaremets(robot_measurement);
+  // reset joints to zeros
+  robot_state->reset();
 
-  static int current=0;
-  data->addMeasurement(robot_measurement);
-  data->showView(current);
-  current++;
+  // update joints
+  unsigned size = robot_measurement->M_chain.size();
+  for (unsigned i = 0; i < size; i++)
+  {
+    robot_state->update(robot_measurement->M_chain.at(i).chain_state.name,
+                        robot_measurement->M_chain.at(i).chain_state.position);
+  }
+
+  // show messuaremets
+  showMessuaremets(robot_measurement);
+
+//   static int current=0;
+//   data->addMeasurement(robot_measurement);
+//   data->showView(current);
+//   current++;
 }
 
 int main(int argc, char **argv)
@@ -595,7 +595,8 @@ int main(int argc, char **argv)
 //       ros::spinOnce();
 //       ros::Duration(0.5).sleep(); // sleep
 //     }
-
+//     data->showView(3);
+//     ros::spinOnce();
 
     // Choose cameras to be calibrated
     std::vector<std::string> camera_frames;
