@@ -46,7 +46,6 @@ namespace calib
 class Markers;
 class RobotState;
 
-
 /** Data
 *
 * Data manipulater: it can be inside the optimazer but it will also used
@@ -71,7 +70,14 @@ public:
   /// \brief Number of views
   std::size_t size() { return view_.size(); }
 
-// public Members
+  /// \brief Clear views
+  void clear() { view_.clear(); }
+
+  // static members
+  static Markers    *markers_;
+  static RobotState *robot_state_;
+
+  // public members
   std::vector<View> view_;
 
 private:
@@ -88,13 +94,8 @@ private:
                        const std::string &frame1,
                        const std::string &frame2,
                        cv::Mat *modif_points);
-
-
-  static Markers    *markers_;
-  static RobotState *robot_state_;
 };
 
 }
 
 #endif // DATA_H
-
