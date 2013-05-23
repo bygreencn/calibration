@@ -93,37 +93,6 @@ void transform3DPoints(const cv::Mat &points,
   transform3DPoints(points, pose2.Inverse() * pose1, modif_points);
 }
 
-
-template <typename T>
-double calc_error(T observed_x, T observed_y,
-                T fx, T fy, T cx, T cy,
-                const T* const camera_rotation,
-                const T* const camera_translation,
-                const T* const point)
-{
-  // camera_rotation are the quaternions
-  T p[3];
-  ceres::QuaternionRotatePoint(camera_rotation, point, p);
-
-  // camera_translation is the translation
-  p[0] += camera_translation[0];
-  p[1] += camera_translation[1];
-  p[2] += camera_translation[2];
-
-  // Compute the projection
-  T xp = p[0] / p[2];
-  T yp = p[1] / p[2];
-  T predicted_x = T(fx) * xp + T(cx);
-  T predicted_y = T(fy) * yp + T(cy);
-
-  // The error is the difference between the predicted and observed position.
-  double residuals[2];
-  residuals[0] = predicted_x - T(observed_x);
-  residuals[1] = predicted_y - T(observed_y);
-
-  return sqrt(residuals[0]*residuals[0] + residuals[1]*residuals[1]);
-}
-
 void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_measurement)
 {
   visual_markers->reset();
@@ -244,14 +213,18 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
       Mat_<double> intrinsicMatrix = cam_model.intrinsicMatrix();
       double _proj_point2D[2];
-      double error = calc_error(_point2D[0], _point2D[1],
-                                intrinsicMatrix(0, 0),
-                                intrinsicMatrix(1, 1),
-                                intrinsicMatrix(0, 2),
-                                intrinsicMatrix(1, 2),
-                                _camera_rotation,
-                                _camera_translation,
-                                _point3D);
+      double residuals[2];
+      calc_residuals(_point2D[0], _point2D[1],
+                     intrinsicMatrix(0, 0),
+                     intrinsicMatrix(1, 1),
+                     intrinsicMatrix(0, 2),
+                     intrinsicMatrix(1, 2),
+                     _camera_rotation,
+                     _camera_translation,
+                     _point3D,
+                     residuals);
+
+      double error = calc_norm(residuals);
 
       current_error += error;
     }

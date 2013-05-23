@@ -48,7 +48,43 @@
 namespace calib
 {
 
-  struct ReprojectionErrorWithQuaternions {
+template <typename T>
+void calc_residuals(double observed_x, double observed_y,
+                    double fx, double fy, double cx, double cy,
+                    const T* const camera_rotation,
+                    const T* const camera_translation,
+                    const T* const point,
+                    T residuals[2])
+{
+  // camera_rotation are the quaternions
+  T p[3];
+  ceres::QuaternionRotatePoint(camera_rotation, point, p);
+
+  // camera_translation is the translation
+  p[0] += camera_translation[0];
+  p[1] += camera_translation[1];
+  p[2] += camera_translation[2];
+
+  // Compute the projection
+  T xp = p[0] / p[2];
+  T yp = p[1] / p[2];
+  T predicted_x = T(fx) * xp + T(cx);
+  T predicted_y = T(fy) * yp + T(cy);
+
+  // The error is the difference between the predicted and observed position.
+  residuals[0] = predicted_x - T(observed_x);
+  residuals[1] = predicted_y - T(observed_y);
+}
+
+template <typename T>
+T calc_norm(T residuals[2])
+{
+  return sqrt(residuals[0]*residuals[0] + residuals[1]*residuals[1]);
+}
+
+
+struct ReprojectionErrorWithQuaternions
+{
   ReprojectionErrorWithQuaternions(double observed_x, double observed_y,
                                    double fx, double fy, double cx, double cy)
     : observed_x(observed_x), observed_y(observed_y),
@@ -60,24 +96,9 @@ namespace calib
                   const T* const point,
                   T *residuals) const
   {
-    // camera_rotation are the quaternions
-    T p[3];
-    ceres::QuaternionRotatePoint(camera_rotation, point, p);
-
-    // camera_translation is the translation
-    p[0] += camera_translation[0];
-    p[1] += camera_translation[1];
-    p[2] += camera_translation[2];
-
-    // Compute the projection
-    T xp = p[0] / p[2];
-    T yp = p[1] / p[2];
-    T predicted_x = T(fx) * xp + T(cx);
-    T predicted_y = T(fy) * yp + T(cy);
-
-    // The error is the difference between the predicted and observed position.
-    residuals[0] = predicted_x - T(observed_x);
-    residuals[1] = predicted_y - T(observed_y);
+    calc_residuals(observed_x, observed_y, fx, fy, cx, cy,      // data
+                   camera_rotation, camera_translation, point,  // parameters
+                   residuals);                                  // residuals
 
     return true;
   }
@@ -89,7 +110,8 @@ namespace calib
                                      const double fx,
                                      const double fy,
                                      const double cx,
-                                     const double cy) {
+                                     const double cy)
+  {
     return (new ceres::AutoDiffCostFunction<ReprojectionErrorWithQuaternions, 2, 4, 3, 3>(
                 new ReprojectionErrorWithQuaternions(observed_x, observed_y, fx, fy, cx, cy)));
   }
@@ -103,9 +125,12 @@ namespace calib
 };
 
 
-struct ReprojectionErrorWithQuaternions2 {
+// not optimazing points
+struct ReprojectionErrorWithQuaternions2
+{
   ReprojectionErrorWithQuaternions2(double observed_x, double observed_y,
-                                   double fx, double fy, double cx, double cy, double *_point)
+                                    double fx, double fy, double cx, double cy,
+                                    double *_point)
     : observed_x(observed_x), observed_y(observed_y),
       fx(fx), fy(fy), cx(cx), cy(cy) {
         point[0] = _point[0];
@@ -118,24 +143,9 @@ struct ReprojectionErrorWithQuaternions2 {
                   const double* camera_translation,
                   double *residuals) const
   {
-    // camera_rotation are the quaternions
-    double p[3];
-    ceres::QuaternionRotatePoint(camera_rotation, point, p);
-
-    // camera_translation is the translation
-    p[0] += camera_translation[0];
-    p[1] += camera_translation[1];
-    p[2] += camera_translation[2];
-
-    // Compute the projection
-    double xp = p[0] / p[2];
-    double yp = p[1] / p[2];
-    double predicted_x = double(fx) * xp + double(cx);
-    double predicted_y = double(fy) * yp + double(cy);
-
-    // The error is the difference between the predicted and observed position.
-    residuals[0] = predicted_x - double(observed_x);
-    residuals[1] = predicted_y - double(observed_y);
+    calc_residuals(observed_x, observed_y, fx, fy, cx, cy,
+                   camera_rotation, camera_translation, point,  // point isn't a param
+                   residuals);
 
     return true;
   }
@@ -162,10 +172,6 @@ struct ReprojectionErrorWithQuaternions2 {
   double point[3];
 };
 
-
-
 }
 
 #endif // COST_FUNCTIONS_H
-
-
