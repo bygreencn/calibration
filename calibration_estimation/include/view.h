@@ -89,6 +89,9 @@ public:
   std::vector<cv::Mat>  board_transformed_pts_3D_; // getTransformedPoints()
   std::vector<Points2D> measured_pts_2D_;          // getMeasurement()
 
+  Points3D              triang_pts_3D_;            // triangulation()
+  std::vector<double>   triang_error_;             // triangulation()
+
   std::vector<Points2D> expected_pts_2D_;          // findCbPoses()
   std::vector<double>   error_;                    // findCbPoses()
   std::vector<cv::Mat>  rvec_;                     // findCbPoses()
@@ -102,9 +105,18 @@ public:
   std::vector<std::string>           frame_name_;  // getFrameNames()
   std::map<std::string, std::size_t> frame_id_;    // frame_name -> frame_id
 
-  std::vector<KDL::Frame> pose_rel_, pose_father_; // getPoses()
+//   std::vector<KDL::Frame> pose_rel_, pose_father_; // getPoses()
 //   KDL::Frame T0; // T0 == pose_father_[0]*pose_rel_[0]
 
+
+  void generateIndexes(const std::vector<std::string> &cameras,
+                       std::vector<int> *idx);
+
+  /// \brief Multi-view triangulation, for the selected cameras
+  /// It will update triang_pts_3D_ variable
+  bool triangulation(const std::vector<std::string> &cameras,       //!< selected cameras (frame names)
+                     const std::vector<double *>    &camera_rot,    //!< rotations
+                     const std::vector<double *>    &camera_trans); //!< translations
 
 private:
   /// \brief Generate 3D chessboard corners (board_points)
@@ -126,7 +138,7 @@ private:
   void getFrameNames();
 
   /// \brief Get Poses from Message and using robot_state_ for calculating the FK
-  void getPoses();
+//   void getPoses();
 
 
 private:

@@ -39,6 +39,7 @@
 #include "conversion.h"
 #include "projection.h"
 #include "robot_state.h"
+#include "triangulation.h"
 
 #include <ros/ros.h>
 
@@ -78,7 +79,7 @@ bool View::generateView(const Msg &msg)
     findCbPoses();
     getTransformedPoints();
     getFrameNames();
-    getPoses();
+//     getPoses();
 
     return true;
   }
@@ -103,14 +104,14 @@ void View::updateRobot()
   }
 }
 
-bool View::isVisible(const std::string &camera_frame)
+bool View::isVisible(const string &camera_frame)
 {
   return find(frame_name_.begin(), frame_name_.end(), camera_frame) != frame_name_.end();
 }
 
-int View::getCamIdx(const std::string &camera_frame)
+int View::getCamIdx(const string &camera_frame)
 {
-  if( isVisible(camera_frame))
+  if (isVisible(camera_frame))
   {
     return frame_id_[camera_frame];
   }
@@ -119,6 +120,96 @@ int View::getCamIdx(const std::string &camera_frame)
     ROS_ERROR("camera_id does not exist");
     return -1;
   }
+}
+
+void View::generateIndexes(const vector<string> &cameras,
+                           vector<int> *idx)
+{
+  idx->clear();
+  for (size_t i = 0; i < cameras.size(); i++)
+  {
+    int cam_idx = getCamIdx(cameras[i]);
+    idx->push_back(cam_idx);
+  }
+}
+
+bool View::triangulation(const vector<string>   &cameras,
+                         const vector<double *> &camera_rot,
+                         const vector<double *> &camera_trans)
+{
+  vector<int> idx;
+  generateIndexes(cameras, &idx);
+
+  if (idx.size() < 2)
+  {
+    // not enougth visible cameras for triangulation
+    return false;
+  }
+
+
+  // get projection matrixes
+  vector<Matx34d> Ps;
+  for (size_t i = 0; i < idx.size(); i++)
+  {
+    int cam_idx = idx[i];
+    if (cam_idx < 0) // not visible
+      continue;
+
+    // get rotation
+    Matx33d R;
+    deserialize(camera_rot[i], &R);
+
+    // get translation
+    Vec3d t;
+    deserialize(camera_trans[i], &t);
+
+    // get intrinsic
+    Matx33d K = cam_model_[cam_idx].intrinsicMatrix();
+
+    // projection matrix
+    Matx34d P;
+    hconcat(K*R, K*t, P);
+
+    // add to vector
+    Ps.push_back(P);
+  }
+
+  // clear triangulated points
+  triang_pts_3D_.clear();
+
+  // j: point
+  // i: visible seleted camera
+  for (size_t j = 0; j < board_model_pts_3D_.size(); j++)
+  {
+    vector<Point2d> points_2d;
+    points_2d.clear();
+
+    for (size_t i = 0; i < idx.size(); i++)
+    {
+      int cam_idx = idx[i];
+      if (cam_idx < 0) // not visible
+        continue;
+
+      vector<Point2d> &measured_pts_2D = measured_pts_2D_[cam_idx];
+      Point2d current_point_2d = measured_pts_2D[j];
+      points_2d.push_back(current_point_2d);
+    }
+
+    if (points_2d.empty())
+      continue;
+
+    Vec3d X;
+    Mat_<double> x = Mat(points_2d);
+
+    // transpose
+    Mat_<double> y;
+    cv::transpose(x,y);
+
+    nViewTriangulate(y, Ps, X);
+    triang_pts_3D_.push_back(X);
+  }
+
+  return true;
 }
 
 void View::generateCorners()
@@ -206,6 +297,11 @@ void View::findCbPoses()
   }
 }
 
+// void View::triangulation()
+// {
+//
+// }
+
 void View::getTransformedPoints()
 {
   size_t size = cam_model_.size();
@@ -268,21 +364,21 @@ void View::getFrameNames()
   }
 }
 
-void View::getPoses()
-{
-  for (size_t i = 0; i < msg_->M_cam.size(); i++)
-  {
-    // get relative pose (camera to its father)
-    KDL::Frame pose;
-    robot_state_->getRelativePose(frame_name_[i], &pose);
-    pose_rel_.push_back(pose);
-    const string link_root = robot_state_->getLinkRoot(frame_name_[i]);
-
-    // get father pose (father to tree root)
-    KDL::Frame pose_f;
-    robot_state_->getFK(link_root, &pose_f);
-    pose_father_.push_back(pose_f);
-  }
-}
+// // void View::getPoses()
+// // {
+// //   for (size_t i = 0; i < msg_->M_cam.size(); i++)
+// //   {
+// //     // get relative pose (camera to its father)
+// //     KDL::Frame pose;
+// //     robot_state_->getRelativePose(frame_name_[i], &pose);
+// //     pose_rel_.push_back(pose);
+// //     const string link_root = robot_state_->getLinkRoot(frame_name_[i]);
+// //
+// //     // get father pose (father to tree root)
+// //     KDL::Frame pose_f;
+// //     robot_state_->getFK(link_root, &pose_f);
+// //     pose_father_.push_back(pose_f);
+// //   }
+// // }
 
 }

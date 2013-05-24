@@ -34,65 +34,76 @@
 
 //! \author Pablo Speciale
 
+#include "triangulation.h"
 
-#ifndef OPTIMIZATION_H
-#define OPTIMIZATION_H
+#include <opencv2/core/core.hpp>
 
-#include "data.h"
-#include "cost_functions.h"
+using namespace std;
+using namespace cv;
 
 namespace calib
 {
 
-class RobotState;
-class Markers;
-
-class Optimization
+template<typename T>
+void homogeneousToEuclidean(const Mat & _X, Mat & _x)
 {
-public:
-  Optimization();
-  ~Optimization();
+    int d = _X.rows - 1;
 
-  /// \brief Set optimizer funtions
-  void setRobotState(RobotState *robot_state);
-  void setMarkers(Markers *markers);
-  void setData(Data *data);
+    const Mat_<T> & X_rows = _X.rowRange(0,d);
+    const Mat_<T> h = _X.row(d);
 
-  /// \brief Set vector of 'cameras_id' to be calibrated
-  void setCamerasCalib(const std::vector<std::string> &cameras);
-
-  /// \brief Check is the state is valid
-  bool valid();
-
-  /// \brief Run optimization process
-  void run();
-
-private:
-  void initialization();
-  void addResiduals();
-  void solver();
-  void updateParam();
-//   void calcError();
-
-  void triangulation();
-
-private:
-  RobotState *robot_state_;
-  Markers    *markers_;
-  Data       *data_;
-
-  std::vector<std::string> cameras_;  // cameras to be calibrated (frame name)
-
-  ceres::Problem problem_;
-
-  std::vector<std::vector<double *> > param_point_3D_;
-  std::vector<double *>               param_camera_rot_;
-  std::vector<double *>               param_camera_trans_;
-
-  std::vector<double> reproj_error_before_;  // reproj_error_*[i] < 0 : means not visible
-  std::vector<double> reproj_error_after_;
-};
-
+    const T * h_ptr = h[0], *h_ptr_end = h_ptr + h.cols;
+    const T * X_ptr = X_rows[0];
+    T * x_ptr = _x.ptr<T>(0);
+    for (; h_ptr != h_ptr_end; ++h_ptr, ++X_ptr, ++x_ptr)
+    {
+        const T * X_col_ptr = X_ptr;
+        T * x_col_ptr = x_ptr, *x_col_ptr_end = x_col_ptr + d * _x.step1();
+        for (; x_col_ptr != x_col_ptr_end; X_col_ptr+=X_rows.step1(), x_col_ptr+=_x.step1() )
+            *x_col_ptr = (*X_col_ptr) / (*h_ptr);
+    }
 }
 
-#endif // OPTIMIZATION_H
+void homogeneousToEuclidean(const InputArray _X, OutputArray _x)
+{
+    // src
+    const Mat X = _X.getMat();
+
+    // dst
+     _x.create(X.rows-1, X.cols, X.type());
+    Mat x = _x.getMat();
+
+    // type
+    if( X.depth() == CV_32F )
+    {
+        homogeneousToEuclidean<float>(X,x);
+    }
+    else
+    {
+        homogeneousToEuclidean<double>(X,x);
+    }
+}
+
+// It is the standard DLT (for multiple views)
+void nViewTriangulate(const Mat_<double> &x, const vector<Matx34d> &Ps, Vec3d &X)
+{
+  CV_Assert(x.rows == 2);
+  unsigned nviews = x.cols;
+  CV_Assert(nviews == Ps.size());
+
+  cv::Mat_<double> design = cv::Mat_<double>::zeros(2 * nviews, 4);
+  for (int i = 0; i < nviews; ++i)
+  {
+    for (int j = 0; j < 4; ++j)
+    {
+      design(i*2,   j) = x(0,i) * Ps[i](2, j) - Ps[i](0, j);
+      design(i*2+1, j) = x(1,i) * Ps[i](2, j) - Ps[i](1, j);
+    }
+  }
+
+  Mat X_homog;
+  cv::SVD::solveZ(design, X_homog);
+  homogeneousToEuclidean(X_homog, X);
+}
+
+}

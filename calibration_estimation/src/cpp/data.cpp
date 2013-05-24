@@ -128,6 +128,22 @@ void Data::showView(std::size_t id, const vector<string> &camera_frames)
       cout << "\trvec = "               << current_view.rvec_[cam_idx] << endl;
       cout << "\ttvec = "               << current_view.tvec_[cam_idx] << endl << endl;
     }
+
+    // show triangulated 3D points
+    if( current_view.triang_pts_3D_.size() > 0 )
+    {
+      Mat new_points;
+      apply_transform(Mat(current_view.triang_pts_3D_),
+                      camera_frames[0],
+                      "base_footprint",
+                      &new_points);
+
+      // add new_points to markers_
+      markers_->addMarkers(new_points,
+                                "new",
+                                "base_footprint",
+                                cv::Scalar(255,255,255));
+    }
   }
 }
 

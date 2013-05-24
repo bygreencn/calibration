@@ -110,7 +110,7 @@ void Optimization::initialization()
   param_camera_trans_.clear();
 
   KDL::Frame T0, current_position;
-  // robot_state_->reset(); // not needed, rigid relationship between the cameras
+//   robot_state_->reset(); // not needed, rigid relationship between the cameras
   for (int c = 0; c < cameras_.size(); c++)
   {
     // get camera pose (camera to robot root)
@@ -132,6 +132,27 @@ void Optimization::initialization()
     double *camera_trans = new double[3];
     serialize(current_position.p, camera_trans);
     param_camera_trans_.push_back(camera_trans);
+  }
+
+  // create 3D points by triangulation (saved insie View: view.triang_pts_3D_)
+  triangulation();
+}
+
+void Optimization::triangulation()
+{
+  for (size_t v = 0; v < data_->size(); v++)
+  {
+//     // try with a subset
+//     std::vector<std::string> camera_frames;
+//     camera_frames.push_back("narrow_stereo_l_stereo_camera_optical_frame"); // [I|0]
+//     camera_frames.push_back("narrow_stereo_r_stereo_camera_optical_frame");
+// //     camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
+// //     camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
+// //     camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
+// //     camera_frames.push_back("high_def_optical_frame");
+    data_->view_[v].triangulation(cameras_, // camera_frames,
+                                  param_camera_rot_,
+                                  param_camera_trans_);
   }
 }
 
@@ -265,18 +286,38 @@ void Optimization::updateParam()
     robot_state_->setUrdfPose(cameras_[i], pose);
   }
 
-//   data_->showView(v);
-
-  sleep(1);
+//   sleep(1);
   robot_state_->updateTree();
 
-  // updateView
-//   for (int i=0; i<data_->view_.size();i++)
-//     data_->view_[i].updateView();
-
-  // TODO: delete this
-  data_->showView(8, cameras_);
 }
+
+// void Optimization::calcError()
+// {
+//   // v: view index
+//   // i: camera index
+//   // j: points
+//   for (size_t v = 0; v < data_->size(); v++)
+//   {
+//     View &current_view = data_->view_[v];
+//
+//     vector<double *> param_point_3D;
+//
+//     for (size_t i = 0; i < cameras_.size(); i++)
+//     {
+//       string cam_frame = cameras_[i];
+//
+//       int cam_idx = current_view.getCamIdx(cam_frame);
+//       vector<Point2d> &measured_pts_2D = current_view.measured_pts_2D_[cam_idx];
+//       Matx33d intrinsicMatrix = current_view.cam_model_[cam_idx].intrinsicMatrix();
+//
+//
+//       // feed optimazer with data
+//       for (int j = 0; j < measured_pts_2D.size(); j++)
+//       {
+//     }
+//   }
+//   }
+// }
 
 }
 

@@ -34,65 +34,23 @@
 
 //! \author Pablo Speciale
 
+#ifndef TRIANGULATION_H
+#define TRIANGULATION_H
 
-#ifndef OPTIMIZATION_H
-#define OPTIMIZATION_H
-
-#include "data.h"
-#include "cost_functions.h"
+#include <opencv2/core/core.hpp>
 
 namespace calib
 {
 
-class RobotState;
-class Markers;
+/// \brief From homogeneous coordinate to euclidean coordinate
+void homogeneousToEuclidean(const cv::InputArray _X, cv::OutputArray _x);
 
-class Optimization
-{
-public:
-  Optimization();
-  ~Optimization();
-
-  /// \brief Set optimizer funtions
-  void setRobotState(RobotState *robot_state);
-  void setMarkers(Markers *markers);
-  void setData(Data *data);
-
-  /// \brief Set vector of 'cameras_id' to be calibrated
-  void setCamerasCalib(const std::vector<std::string> &cameras);
-
-  /// \brief Check is the state is valid
-  bool valid();
-
-  /// \brief Run optimization process
-  void run();
-
-private:
-  void initialization();
-  void addResiduals();
-  void solver();
-  void updateParam();
-//   void calcError();
-
-  void triangulation();
-
-private:
-  RobotState *robot_state_;
-  Markers    *markers_;
-  Data       *data_;
-
-  std::vector<std::string> cameras_;  // cameras to be calibrated (frame name)
-
-  ceres::Problem problem_;
-
-  std::vector<std::vector<double *> > param_point_3D_;
-  std::vector<double *>               param_camera_rot_;
-  std::vector<double *>               param_camera_trans_;
-
-  std::vector<double> reproj_error_before_;  // reproj_error_*[i] < 0 : means not visible
-  std::vector<double> reproj_error_after_;
-};
+/// \brief Multi-view triangulation
+/// This is a generalization of DLT triangulation (HZ2 p312)
+void nViewTriangulate(const cv::Mat_<double> &x,
+                      const std::vector<cv::Matx34d> &Ps,
+                      cv::Vec3d &X);
 
 }
 
-#endif // OPTIMIZATION_H
+#endif // TRIANGULATION_H
