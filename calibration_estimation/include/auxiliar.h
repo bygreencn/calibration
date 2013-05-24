@@ -60,6 +60,10 @@ std::ostream &operator <<(std::ostream &os, const std::vector<T> &v)
 
 void print_array(double *array, unsigned size, const std::string &msg =std::string(""));
 
+double norm(const std::vector<cv::Point2d> &p1,
+            const std::vector<cv::Point2d> &p2,
+            std::vector<double> *ind_error =0);
+
 }
 
 #endif // AUXILIAR_H

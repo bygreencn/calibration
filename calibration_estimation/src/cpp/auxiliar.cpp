@@ -41,6 +41,7 @@
 
 using namespace std;
 using namespace ros;
+using namespace cv;
 
 namespace calib
 {
@@ -50,5 +51,39 @@ void print_array(double *array, unsigned size, const std::string &msg)
   cv::Mat_<double> out(size, 1, array);
   std::cout << msg << out << std::endl;
 }
+
+
+
+double norm(const vector<Point2d> &p1,
+            const vector<Point2d> &p2,
+            vector<double> *ind_error)
+{
+  size_t size = p1.size();
+  assert(size && p2.size());
+
+  if (ind_error != 0)
+  {
+    ind_error->clear();
+    ind_error->resize(size);
+  }
+
+  double error = 0;
+  for (int i = 0; i < p1.size(); i++)
+  {
+    Point2d diff = p1[i] - p2[i];
+    double current_error = sqrt(diff.dot(diff));
+    error += current_error;
+
+//     double x_diff = p1[i].x - p2[i].x;
+//     double y_diff = p1[i].y - p2[i].y;
+//     error += sqrt(x_diff*x_diff + y_diff*y_diff);
+
+    if (ind_error != 0)
+      (*ind_error)[i] = current_error;
+  }
+
+  return error;
+}
+
 
 }

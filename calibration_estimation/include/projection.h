@@ -62,7 +62,8 @@ double computeReprojectionErrors(cv::InputArray points3D,
                                  cv::InputArray distCoeffs,
                                  cv::InputArray rvec,
                                  cv::InputArray tvec,
-                                 cv::OutputArray proj_points2D =cv::noArray());
+                                 cv::OutputArray proj_points2D =cv::noArray(),
+                                 std::vector<double> *ind_error =0);
 
 /// \brief Transform 3D points using rvec (3x1 or 1x3 or 3x3) and tvec (3x1)
 void transform3DPoints(const cv::Mat &points,

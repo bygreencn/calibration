@@ -89,8 +89,13 @@ public:
   std::vector<cv::Mat>  board_transformed_pts_3D_; // getTransformedPoints()
   std::vector<Points2D> measured_pts_2D_;          // getMeasurement()
 
-  Points3D              triang_pts_3D_;            // triangulation()
-  std::vector<double>   triang_error_;             // triangulation()
+  Points3D                          triang_pts_3D_;  // triangulation()
+  std::vector<Points2D>             proj_pts_2D_;    // triangulation()
+  std::vector<double>               triang_error_;   // calc_error()
+  std::vector<std::vector<double> > indivual_error_; // calc_error()
+
+  static std::vector<double *>    camera_rot_;       // external
+  static std::vector<double *>    camera_trans_;     // external
 
   std::vector<Points2D> expected_pts_2D_;          // findCbPoses()
   std::vector<double>   error_;                    // findCbPoses()
@@ -109,6 +114,10 @@ public:
 //   KDL::Frame T0; // T0 == pose_father_[0]*pose_rel_[0]
 
 
+  /// \brief Unfortunatly, the camera order can change depending of the view
+  /// and some views don't have data for all the cameras. This idx helps to
+  /// this issue mapping the cameras (idx[cam] < 0, means no data in the view
+  /// for that camera)
   void generateIndexes(const std::vector<std::string> &cameras,
                        std::vector<int> *idx);
 
@@ -117,6 +126,8 @@ public:
   bool triangulation(const std::vector<std::string> &cameras,       //!< selected cameras (frame names)
                      const std::vector<double *>    &camera_rot,    //!< rotations
                      const std::vector<double *>    &camera_trans); //!< translations
+
+  void calc_error();
 
 private:
   /// \brief Generate 3D chessboard corners (board_points)
@@ -139,7 +150,6 @@ private:
 
   /// \brief Get Poses from Message and using robot_state_ for calculating the FK
 //   void getPoses();
-
 
 private:
   static RobotState *robot_state_; // it is needed in order to calculate cameras

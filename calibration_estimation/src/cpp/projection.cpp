@@ -72,29 +72,14 @@ void projectPoints(const image_geometry::PinholeCameraModel &cam_model,
   }
 }
 
-double _norm(const vector<Point2d> &p1, const vector<Point2d> &p2)
-{
-  assert(p1.size() && p2.size());
-  double error = 0;
-  for (int i = 0; i < p1.size(); i++)
-  {
-    Point2d diff = p1[i] - p2[i];
-    error += sqrt(diff.dot(diff));
-//     double x_diff = p1[i].x - p2[i].x;
-//     double y_diff = p1[i].y - p2[i].y;
-//     error += sqrt(x_diff*x_diff + y_diff*y_diff);
-  }
-
-  return error;
-}
-
 double computeReprojectionErrors(InputArray points3D,
                                  InputArray points2D,
                                  InputArray cameraMatrix,
                                  InputArray distCoeffs,
                                  InputArray rvec,
                                  InputArray tvec,
-                                 OutputArray _proj_points2D)
+                                 OutputArray _proj_points2D,
+                                 vector<double> *individual_error)
 {
   // set proper type for the output
   Mat x = points2D.getMat();
@@ -111,7 +96,7 @@ double computeReprojectionErrors(InputArray points3D,
   }
 
   // return error
-  return _norm(x, proj_points2D);
+  return calib::norm(x, proj_points2D, individual_error);
 }
 
 void transform3DPoints(const Mat &points,

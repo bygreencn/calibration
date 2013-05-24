@@ -77,6 +77,35 @@ void calc_residuals(double observed_x, double observed_y,
 }
 
 template <typename T>
+void calc_residuals2(double observed[2],
+                    double fx, double fy, double cx, double cy,
+                    const T* const camera_rotation,
+                    const T* const camera_translation,
+                    const T* const point,
+                    T predicted[2],
+                    T residuals[2])
+{
+  // camera_rotation are the quaternions
+  T p[3];
+  ceres::QuaternionRotatePoint(camera_rotation, point, p);
+
+  // camera_translation is the translation
+  p[0] += camera_translation[0];
+  p[1] += camera_translation[1];
+  p[2] += camera_translation[2];
+
+  // Compute the projection
+  T xp = p[0] / p[2];
+  T yp = p[1] / p[2];
+  predicted[0] = T(fx) * xp + T(cx);
+  predicted[1] = T(fy) * yp + T(cy);
+
+  // The error is the difference between the predicted and observed position.
+  residuals[0] = predicted[0] - T(observed[0]);
+  residuals[1] = predicted[1] - T(observed[1]);
+}
+
+template <typename T>
 T calc_norm(T residuals[2])
 {
   return sqrt(residuals[0]*residuals[0] + residuals[1]*residuals[1]);

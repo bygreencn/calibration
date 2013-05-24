@@ -195,13 +195,12 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
     for (int k = 0; k < board_model_pts_3D.size(); k++)
     {
       double _point3D[3];
-
       serialize(board_model_pts_3D[k], _point3D);
+
       double _point2D[2];
-
       serialize(measured_pts_2D[k], _point2D);
-      double _camera_rotation[4];
 
+      double _camera_rotation[4];
       KDL::Rotation _r;
       cv2kdl(rvec, &_r);
       serialize(_r,_camera_rotation);

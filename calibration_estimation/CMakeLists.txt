@@ -77,6 +77,7 @@ add_executable(run_estimation
                  src/cpp/projection.cpp
                  src/cpp/robot_state.cpp
                  src/cpp/robot_state_publisher.cpp
+                 src/cpp/triangulation.cpp
                  src/cpp/view.cpp
 )
 

@@ -100,7 +100,7 @@ void Optimization::run()
 
   initialization();
   addResiduals();
-  solver();
+//   solver();
   updateParam();
 }
 
@@ -133,6 +133,9 @@ void Optimization::initialization()
     serialize(current_position.p, camera_trans);
     param_camera_trans_.push_back(camera_trans);
   }
+
+  View::camera_rot_ = param_camera_rot_;
+  View::camera_trans_ = param_camera_trans_;
 
   // create 3D points by triangulation (saved insie View: view.triang_pts_3D_)
   triangulation();
@@ -179,7 +182,8 @@ void Optimization::addResiduals()
 
         // serialize 3D points (board points in frame 0)
         int cam_idx = current_view.getCamIdx(cam_frame);
-        Mat board_pts_frame0 = current_view.board_transformed_pts_3D_[cam_idx];
+//         Mat board_pts_frame0 = current_view.board_transformed_pts_3D_[cam_idx];
+        Mat board_pts_frame0(current_view.triang_pts_3D_);
         serialize(board_pts_frame0, &param_point_3D);
       }
       else
@@ -198,20 +202,18 @@ void Optimization::addResiduals()
       for (int j = 0; j < measured_pts_2D.size(); j++)
       {
         ceres::CostFunction *cost_function =
-          ReprojectionErrorWithQuaternions2::Create(measured_pts_2D[j].x,
+          ReprojectionErrorWithQuaternions::Create(measured_pts_2D[j].x,
                                                     measured_pts_2D[j].y,
                                                     intrinsicMatrix(0,0),
                                                     intrinsicMatrix(1,1),
                                                     intrinsicMatrix(0,2),
-                                                    intrinsicMatrix(1,2),
-                                                    param_point_3D[j]
-                                                    );
+                                                    intrinsicMatrix(1,2));
 
         problem_.AddResidualBlock(cost_function,
                                   NULL,                      // squared loss
                                   param_camera_rot_[i],      // camera_rot i
-                                  param_camera_trans_[i]     // camera_trans i
-                                  );                         // point j (constant?)
+                                  param_camera_trans_[i],     // camera_trans i
+                                  param_point_3D[j]);                         // point j (constant?)
       }
 
       // first camera is constanst: [I|0]
@@ -288,6 +290,17 @@ void Optimization::updateParam()
 
 //   sleep(1);
   robot_state_->updateTree();
+
+//   triangulation();
+//
+//   for (size_t i=0; i<data_->size(); i++)
+//   {
+//     PRINT(i)
+//     data_->showView(i);
+//     ros::spinOnce();
+//     sleep(1);
+// //     ros::Duration(1).sleep(); // sleep
+//   }
 
 }
 

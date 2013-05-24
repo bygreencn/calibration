@@ -40,6 +40,7 @@
 #include "projection.h"
 #include "robot_state.h"
 #include "triangulation.h"
+#include "auxiliar.h"
 
 #include <ros/ros.h>
 
@@ -51,6 +52,8 @@ namespace calib
 
 // Static member allocation
 RobotState *View::robot_state_ = 0;
+std::vector<double *> View::camera_rot_;
+std::vector<double *> View::camera_trans_;
 
 View::View()
 {
@@ -137,15 +140,16 @@ bool View::triangulation(const vector<string>   &cameras,
                          const vector<double *> &camera_rot,
                          const vector<double *> &camera_trans)
 {
+  // clear triangulated points
+  triang_pts_3D_.clear();
+
+  // generate idx mapping
   vector<int> idx;
   generateIndexes(cameras, &idx);
 
+  // not enougth visible cameras for triangulation
   if (idx.size() < 2)
-  {
-    // not enougth visible cameras for triangulation
     return false;
-  }
-
 
   // get projection matrixes
   vector<Matx34d> Ps;
@@ -174,11 +178,10 @@ bool View::triangulation(const vector<string>   &cameras,
     Ps.push_back(P);
   }
 
-  // clear triangulated points
-  triang_pts_3D_.clear();
 
   // j: point
   // i: visible seleted camera
+  //! create an vector the point correspondences in views where there is data
   for (size_t j = 0; j < board_model_pts_3D_.size(); j++)
   {
     vector<Point2d> points_2d;
@@ -209,7 +212,76 @@ bool View::triangulation(const vector<string>   &cameras,
     triang_pts_3D_.push_back(X);
   }
 
+  calc_error();
+
   return true;
+}
+
+void setZero(vector<double> &v, size_t size)
+{
+  v.clear();
+  v.resize(size);
+  for (size_t i=0; i < size; i++)
+  {
+    v[i] = .0;
+  }
+}
+
+void View::calc_error()
+{
+  size_t size = cam_model_.size();
+  proj_pts_2D_.clear();
+  triang_error_.clear();
+  indivual_error_.clear();
+
+//   int i=1;
+//   for (size_t i = 0; i < size; i++)
+//   {
+//     // get rotation
+//     Matx33d R;
+//     deserialize(camera_rot_[i], &R);
+//     Mat rvec;
+//     Rodrigues(R, rvec);
+//
+//     // get translation
+//     Vec3d tvec;
+//     deserialize(camera_trans_[i], &tvec);
+//
+//     // get intrinsic
+//     Matx33d K = cam_model_[i].intrinsicMatrix();
+
+    // project points
+    vector<double> indivual_error;
+    double err;
+    for (size_t i = 0; i < measured_pts_2D_.size(); i++)
+    {
+    // get rotation
+    Matx33d R;
+    deserialize(camera_rot_[i], &R);
+    Mat rvec;
+    Rodrigues(R, rvec);
+
+    // get translation
+    Vec3d tvec;
+    deserialize(camera_trans_[i], &tvec);
+
+      Mat D, expected_pts_2D;
+      err = computeReprojectionErrors(board_model_pts_3D_, // triang_pts_3D_,
+                                      measured_pts_2D_[i],
+                                      cam_model_[i].intrinsicMatrix(),
+                                      D,
+                                      rvec_[i], tvec_[i],
+                                      expected_pts_2D, &indivual_error);
+//     PRINT(indivual_error)
+      PRINT(tvec)
+      PRINT(tvec_[i])
+    }
+
+    triang_error_.push_back(err/board_model_pts_3D_.size());
+    indivual_error_.push_back(indivual_error);
+//   }
+
+  PRINT(triang_error_ )
 }
 
 void View::generateCorners()
@@ -380,5 +452,7 @@ void View::getFrameNames()
 // //     pose_father_.push_back(pose_f);
 // //   }
 // // }
+
+
 
 }
