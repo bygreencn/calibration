@@ -132,9 +132,9 @@ void Data::showView(std::size_t id, const vector<string> &camera_frames)
     }
 
     // more stats
-//     current_view.updateView();
-//     current_view.calc_error();
-//     current_view.output();
+    current_view.updateView();
+    current_view.calc_error();
+    current_view.output();
 
     // show triangulated 3D points
     if( current_view.triang_pts_3D_.size() > 0 )

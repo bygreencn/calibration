@@ -583,10 +583,10 @@ int main(int argc, char **argv)
     camera_frames.clear();
     camera_frames.push_back("narrow_stereo_l_stereo_camera_optical_frame"); // [I|0]
     camera_frames.push_back("narrow_stereo_r_stereo_camera_optical_frame");
-//     camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
-//     camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
-//     camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
-//     camera_frames.push_back("high_def_optical_frame");
+    camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
+    camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
+    camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
+    camera_frames.push_back("high_def_optical_frame");
 
     // Optimization
     optimazer.setRobotState(robot_state);

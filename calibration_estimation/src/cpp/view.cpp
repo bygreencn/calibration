@@ -337,7 +337,7 @@ void View::calc_error()
 
     vector<double> indivual_error;
     Mat D, expected_pts_2D;
-    err += computeReprojectionErrors(triang_pts_3D_, //board_transformed_pts_3D_[cam_idx], //board_model_pts_3D_, // triang_pts_3D_,
+    err += computeReprojectionErrors(board_transformed_pts_3D_[cam_idx], //board_transformed_pts_3D_[cam_idx], //board_model_pts_3D_, // triang_pts_3D_,
                                      measured_pts_2D_[cam_idx],
                                      cam_model_[cam_idx].intrinsicMatrix(),
                                      D,

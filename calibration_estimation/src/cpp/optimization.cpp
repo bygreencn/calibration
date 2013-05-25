@@ -183,8 +183,11 @@ void Optimization::addResiduals()
 
         // serialize 3D points (board points in frame 0)
         int cam_idx = current_view.getCamIdx(cameras_[i]);
+
+        //! 3D points
         Mat board_pts_frame0 = current_view.board_transformed_pts_3D_[cam_idx];
 //         Mat board_pts_frame0(current_view.triang_pts_3D_);
+
         serialize(board_pts_frame0, &param_point_3D);
       }
       else
@@ -203,20 +206,18 @@ void Optimization::addResiduals()
       for (int j = 0; j < measured_pts_2D.size(); j++)
       {
         ceres::CostFunction *cost_function =
-          ReprojectionErrorWithQuaternions2::Create(measured_pts_2D[j].x,
+          ReprojectionErrorWithQuaternions::Create(measured_pts_2D[j].x,
                                                     measured_pts_2D[j].y,
                                                     intrinsicMatrix(0,0),
                                                     intrinsicMatrix(1,1),
                                                     intrinsicMatrix(0,2),
-                                                    intrinsicMatrix(1,2),
-                                                    param_point_3D[j]
-                                                  );
+                                                    intrinsicMatrix(1,2));
 
         problem_.AddResidualBlock(cost_function,
                                   NULL,                      // squared loss
                                   param_camera_rot_[i],      // camera_rot i
-                                  param_camera_trans_[i]     // camera_trans i
-                                  );                         // point j (constant?)
+                                  param_camera_trans_[i],    // camera_trans i
+                                  param_point_3D[j]);        // point j (constant?)
       }
 
       // first camera is constanst: [I|0]
