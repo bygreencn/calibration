@@ -71,6 +71,9 @@ RobotState *robot_state;
 Markers    *visual_markers;
 Data       *data;
 
+Optimization optimazer;
+map<string, int> sample_id;
+
 /// \brief transform 3D using the Rotation and Translation defined in frame
 void transform3DPoints(const cv::Mat &points,
                        const string &frame,
@@ -469,24 +472,27 @@ void showMessuaremets(const calibration_msgs::RobotMeasurement::ConstPtr &robot_
 
 void robotMeasurementCallback(const calibration_msgs::RobotMeasurement::Ptr robot_measurement)
 {
-  // reset joints to zeros
-  robot_state->reset();
+//   // reset joints to zeros
+//   robot_state->reset();
+//
+//   // update joints
+//   unsigned size = robot_measurement->M_chain.size();
+//   for (unsigned i = 0; i < size; i++)
+//   {
+//     robot_state->update(robot_measurement->M_chain.at(i).chain_state.name,
+//                         robot_measurement->M_chain.at(i).chain_state.position);
+//   }
+//
+//   // show messuaremets
+//   showMessuaremets(robot_measurement);
+//
+//
+//   static int i=0;
+//   i++;
+//   if( i%5==0 )
+//     optimazer.run();
 
-  // update joints
-  unsigned size = robot_measurement->M_chain.size();
-  for (unsigned i = 0; i < size; i++)
-  {
-    robot_state->update(robot_measurement->M_chain.at(i).chain_state.name,
-                        robot_measurement->M_chain.at(i).chain_state.position);
-  }
-
-  // show messuaremets
-  showMessuaremets(robot_measurement);
-
-//   static int current=0;
-//   data->addMeasurement(robot_measurement);
-//   data->showView(current);
-//   current++;
+  data->showView( sample_id[robot_measurement->sample_id] );
 }
 
 int main(int argc, char **argv)
@@ -548,16 +554,18 @@ int main(int argc, char **argv)
     rosbag::Bag bag(rosbag_filename);
     rosbag::View view(bag, rosbag::TopicQuery("robot_measurement"));
     vector<calibration_msgs::RobotMeasurement::Ptr> msgs;
+    int id=0;
     BOOST_FOREACH(rosbag::MessageInstance const m, view)
     {
       calibration_msgs::RobotMeasurement::Ptr i = m.instantiate<calibration_msgs::RobotMeasurement>();
       if (i != NULL)
       {
+        sample_id[i->sample_id] = id;
         data->addMeasurement(i);
+        id++;
       }
     }
     bag.close();
-
 
     // show views
 //     size_t size = data->size();
@@ -575,13 +583,12 @@ int main(int argc, char **argv)
     camera_frames.clear();
     camera_frames.push_back("narrow_stereo_l_stereo_camera_optical_frame"); // [I|0]
     camera_frames.push_back("narrow_stereo_r_stereo_camera_optical_frame");
-    camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
-    camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
-    camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
-    camera_frames.push_back("high_def_optical_frame");
+//     camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
+//     camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
+//     camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
+//     camera_frames.push_back("high_def_optical_frame");
 
     // Optimization
-    Optimization optimazer;
     optimazer.setRobotState(robot_state);
     optimazer.setMarkers(visual_markers);
     optimazer.setData(data);

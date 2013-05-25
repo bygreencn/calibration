@@ -54,6 +54,7 @@ namespace calib
 RobotState *View::robot_state_ = 0;
 std::vector<double *> View::camera_rot_;
 std::vector<double *> View::camera_trans_;
+std::vector<std::string> View::cameras_;
 
 View::View()
 {
@@ -68,6 +69,18 @@ void View::setRobotState(RobotState *robot_state)
   robot_state_ = robot_state;
 }
 
+void View::updateView()
+{
+  updateRobot();
+  generateCorners();
+  getCameraModels();
+  getMeasurements();
+  findCbPoses();
+  getTransformedPoints();
+  getFrameNames();
+  getPoses();
+}
+
 bool View::generateView(const Msg &msg)
 {
   // copy message (this class is a container)
@@ -75,15 +88,7 @@ bool View::generateView(const Msg &msg)
 
   if (robot_state_ != 0)
   {
-    updateRobot();
-    generateCorners();
-    getCameraModels();
-    getMeasurements();
-    findCbPoses();
-    getTransformedPoints();
-    getFrameNames();
-//     getPoses();
-
+    updateView();
     return true;
   }
   else
@@ -140,8 +145,44 @@ bool View::triangulation(const vector<string>   &cameras,
                          const vector<double *> &camera_rot,
                          const vector<double *> &camera_trans)
 {
-  // clear triangulated points
-  triang_pts_3D_.clear();
+  updateView();
+  updateRobot();
+
+//   // clear triangulated points
+//   triang_pts_3D_.clear();
+//
+//   int npoints = board_model_pts_3D_.size();
+//   for (size_t j = 0; j < npoints; j++)
+//   {
+//     cv::Point3d p;
+//     p.x = p.y = p.z = 0;
+//     for (size_t i = 0; i < board_transformed_pts_3D_.size(); i++)
+//     {
+//       p.x += board_transformed_pts_3D_[i].at<double>(j,0);
+//       p.y += board_transformed_pts_3D_[i].at<double>(j,1);
+//       p.z += board_transformed_pts_3D_[i].at<double>(j,2);
+//     }
+//
+//     p.x /= npoints;
+//     p.y /= npoints;
+//     p.z /= npoints;
+//
+//     triang_pts_3D_.push_back(p);
+//   }
+//
+//   if( !triang_pts_3D_.empty() )
+//     calc_error();
+//
+//   return true;
+
+
+// //   triang_pts_3D_ = board_transformed_pts_3D_[board_transformed_pts_3D_.size()-1];
+// //
+// //   if( !triang_pts_3D_.empty() )
+// //     calc_error();
+// //
+// //   return true;
+
 
   // generate idx mapping
   vector<int> idx;
@@ -150,6 +191,8 @@ bool View::triangulation(const vector<string>   &cameras,
   // not enougth visible cameras for triangulation
   if (idx.size() < 2)
     return false;
+
+  KDL::Frame T0 = pose_father_[idx[0]]*pose_rel_[idx[0]];
 
   // get projection matrixes
   vector<Matx34d> Ps;
@@ -169,6 +212,13 @@ bool View::triangulation(const vector<string>   &cameras,
 
     // get intrinsic
     Matx33d K = cam_model_[cam_idx].intrinsicMatrix();
+
+
+//     KDL::Frame Ti = pose_father_[cam_idx]*pose_rel_[cam_idx];
+//     kdl2cv(Ti.Inverse() * T0, R, t);
+
+//     PRINT(R);
+//     PRINT(t);
 
     // projection matrix
     Matx34d P;
@@ -212,7 +262,8 @@ bool View::triangulation(const vector<string>   &cameras,
     triang_pts_3D_.push_back(X);
   }
 
-  calc_error();
+  if( !triang_pts_3D_.empty() )
+    calc_error();
 
   return true;
 }
@@ -250,11 +301,24 @@ void View::calc_error()
 //     // get intrinsic
 //     Matx33d K = cam_model_[i].intrinsicMatrix();
 
-    // project points
-    vector<double> indivual_error;
-    double err;
-    for (size_t i = 0; i < measured_pts_2D_.size(); i++)
-    {
+//     KDL::Frame T0 = pose_father_[0]*pose_rel_[0];
+
+  // generate idx mapping
+  vector<int> idx;
+  generateIndexes(cameras_, &idx);
+
+  // not enougth visible cameras for triangulation
+  if (idx.size() < 2)
+    return;
+
+  // project points
+  double err = 0;
+  for (size_t i = 0; i < idx.size(); i++)
+  {
+    int cam_idx = idx[i];
+    if (cam_idx < 0) // not visible
+      continue;
+
     // get rotation
     Matx33d R;
     deserialize(camera_rot_[i], &R);
@@ -264,24 +328,39 @@ void View::calc_error()
     // get translation
     Vec3d tvec;
     deserialize(camera_trans_[i], &tvec);
+//
+//
+//       KDL::Frame Ti = pose_father_[i]*pose_rel_[i];
+//       kdl2cv(Ti.Inverse() * T0, R, tvec);
+//       Rodrigues(R, rvec);
 
-      Mat D, expected_pts_2D;
-      err = computeReprojectionErrors(board_model_pts_3D_, // triang_pts_3D_,
-                                      measured_pts_2D_[i],
-                                      cam_model_[i].intrinsicMatrix(),
-                                      D,
-                                      rvec_[i], tvec_[i],
-                                      expected_pts_2D, &indivual_error);
-//     PRINT(indivual_error)
-      PRINT(tvec)
-      PRINT(tvec_[i])
-    }
 
-    triang_error_.push_back(err/board_model_pts_3D_.size());
+    vector<double> indivual_error;
+    Mat D, expected_pts_2D;
+    err += computeReprojectionErrors(triang_pts_3D_, //board_transformed_pts_3D_[cam_idx], //board_model_pts_3D_, // triang_pts_3D_,
+                                     measured_pts_2D_[cam_idx],
+                                     cam_model_[cam_idx].intrinsicMatrix(),
+                                     D,
+                                     rvec, tvec,
+                                     expected_pts_2D, &indivual_error);
+
+//       PRINT(indivual_error)
+
+//       Mat_<double> x = Mat(expected_pts_2D);
+//       Mat_<double> y;
+//       cv::transpose(x,y);
+
+//       PRINT(x)
+//       PRINT(tvec)
+//       PRINT(tvec_[i])
     indivual_error_.push_back(indivual_error);
+    proj_pts_2D_.push_back(expected_pts_2D);
+    triang_error_.push_back(err / board_model_pts_3D_.size());
+  }
+
 //   }
 
-  PRINT(triang_error_ )
+//   PRINT(triang_error_ )
 }
 
 void View::generateCorners()
@@ -436,23 +515,37 @@ void View::getFrameNames()
   }
 }
 
-// // void View::getPoses()
-// // {
-// //   for (size_t i = 0; i < msg_->M_cam.size(); i++)
-// //   {
-// //     // get relative pose (camera to its father)
-// //     KDL::Frame pose;
-// //     robot_state_->getRelativePose(frame_name_[i], &pose);
-// //     pose_rel_.push_back(pose);
-// //     const string link_root = robot_state_->getLinkRoot(frame_name_[i]);
-// //
-// //     // get father pose (father to tree root)
-// //     KDL::Frame pose_f;
-// //     robot_state_->getFK(link_root, &pose_f);
-// //     pose_father_.push_back(pose_f);
-// //   }
-// // }
+void View::getPoses()
+{
+  for (size_t i = 0; i < msg_->M_cam.size(); i++)
+  {
+    // get relative pose (camera to its father)
+    KDL::Frame pose;
+    robot_state_->getRelativePose(frame_name_[i], &pose);
+    pose_rel_.push_back(pose);
+    const string link_root = robot_state_->getLinkRoot(frame_name_[i]);
 
+    // get father pose (father to tree root)
+    KDL::Frame pose_f;
+    robot_state_->getFK(link_root, &pose_f);
+    pose_father_.push_back(pose_f);
+  }
+}
+
+void View::output()
+{
+  for (size_t i = 0; i < cameras_.size(); i++)
+    PRINT(measured_pts_2D_[getCamIdx(cameras_[i])])
+
+  for (size_t i = 0; i < cameras_.size(); i++)
+    PRINT(proj_pts_2D_[i])
+
+  for (size_t i = 0; i < cameras_.size(); i++)
+    PRINT(triang_error_[i])
+
+  for (size_t i = 0; i < cameras_.size(); i++)
+    PRINT(indivual_error_[i])
+}
 
 
 }

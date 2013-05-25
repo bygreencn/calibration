@@ -82,6 +82,7 @@ void Optimization::setData(Data *data)
 void Optimization::setCamerasCalib(const std::vector<std::string> &cameras)
 {
   cameras_ = cameras;
+  View::cameras_ = cameras;
 }
 
 bool Optimization::valid()
@@ -100,7 +101,7 @@ void Optimization::run()
 
   initialization();
   addResiduals();
-//   solver();
+  solver();
   updateParam();
 }
 
@@ -145,13 +146,13 @@ void Optimization::triangulation()
 {
   for (size_t v = 0; v < data_->size(); v++)
   {
-//     // try with a subset
+    // try with a subset
 //     std::vector<std::string> camera_frames;
 //     camera_frames.push_back("narrow_stereo_l_stereo_camera_optical_frame"); // [I|0]
 //     camera_frames.push_back("narrow_stereo_r_stereo_camera_optical_frame");
-// //     camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
-// //     camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
-// //     camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
+//     camera_frames.push_back("wide_stereo_l_stereo_camera_optical_frame");
+//     camera_frames.push_back("wide_stereo_r_stereo_camera_optical_frame");
+//     camera_frames.push_back("head_mount_kinect_rgb_optical_frame");
 // //     camera_frames.push_back("high_def_optical_frame");
     data_->view_[v].triangulation(cameras_, // camera_frames,
                                   param_camera_rot_,
@@ -181,9 +182,9 @@ void Optimization::addResiduals()
           break;
 
         // serialize 3D points (board points in frame 0)
-        int cam_idx = current_view.getCamIdx(cam_frame);
-//         Mat board_pts_frame0 = current_view.board_transformed_pts_3D_[cam_idx];
-        Mat board_pts_frame0(current_view.triang_pts_3D_);
+        int cam_idx = current_view.getCamIdx(cameras_[i]);
+        Mat board_pts_frame0 = current_view.board_transformed_pts_3D_[cam_idx];
+//         Mat board_pts_frame0(current_view.triang_pts_3D_);
         serialize(board_pts_frame0, &param_point_3D);
       }
       else
@@ -202,18 +203,20 @@ void Optimization::addResiduals()
       for (int j = 0; j < measured_pts_2D.size(); j++)
       {
         ceres::CostFunction *cost_function =
-          ReprojectionErrorWithQuaternions::Create(measured_pts_2D[j].x,
+          ReprojectionErrorWithQuaternions2::Create(measured_pts_2D[j].x,
                                                     measured_pts_2D[j].y,
                                                     intrinsicMatrix(0,0),
                                                     intrinsicMatrix(1,1),
                                                     intrinsicMatrix(0,2),
-                                                    intrinsicMatrix(1,2));
+                                                    intrinsicMatrix(1,2),
+                                                    param_point_3D[j]
+                                                  );
 
         problem_.AddResidualBlock(cost_function,
                                   NULL,                      // squared loss
                                   param_camera_rot_[i],      // camera_rot i
-                                  param_camera_trans_[i],     // camera_trans i
-                                  param_point_3D[j]);                         // point j (constant?)
+                                  param_camera_trans_[i]     // camera_trans i
+                                  );                         // point j (constant?)
       }
 
       // first camera is constanst: [I|0]
@@ -237,6 +240,9 @@ void Optimization::solver()
 
   ceres::Solver::Options options;
   options.linear_solver_type = ceres::DENSE_SCHUR;
+  options.num_threads = 8;
+  options.max_num_iterations = 1000;
+  options.function_tolerance = 1e-32;
   options.minimizer_progress_to_stdout = true;
 //   options.minimizer_progress_to_stdout = false;
 
@@ -281,7 +287,7 @@ void Optimization::updateParam()
     KDL::Frame pose_father;
     robot_state_->getFK(link_root, &pose_father);
 
-    // get cameras: [R\t]
+    // get cameras: [R|t]
     KDL::Frame current_position = pose_father.Inverse() * T0 * frame.Inverse();
     urdf::Pose pose;
     kdl2urdf(current_position, &pose);
@@ -291,9 +297,20 @@ void Optimization::updateParam()
 //   sleep(1);
   robot_state_->updateTree();
 
+  View::camera_rot_ = param_camera_rot_;
+  View::camera_trans_ = param_camera_trans_;
+
+
 //   triangulation();
-//
-//   for (size_t i=0; i<data_->size(); i++)
+//   data_->view_[3].triangulation(cameras_, // camera_frames,
+//                                 param_camera_rot_,
+//                                 param_camera_trans_);
+  data_->showView(3);
+
+
+  //   triangulation();
+//   i=4;
+// //   for (size_t i=0; i<data_->size(); i++)
 //   {
 //     PRINT(i)
 //     data_->showView(i);
@@ -301,7 +318,6 @@ void Optimization::updateParam()
 //     sleep(1);
 // //     ros::Duration(1).sleep(); // sleep
 //   }
-
 }
 
 // void Optimization::calcError()

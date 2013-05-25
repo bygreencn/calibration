@@ -67,7 +67,7 @@ public:
   /// \brief Run optimization process
   void run();
 
-private:
+// private:
   void initialization();
   void addResiduals();
   void solver();
@@ -88,9 +88,6 @@ private:
   std::vector<std::vector<double *> > param_point_3D_;
   std::vector<double *>               param_camera_rot_;
   std::vector<double *>               param_camera_trans_;
-
-  std::vector<double> reproj_error_before_;  // reproj_error_*[i] < 0 : means not visible
-  std::vector<double> reproj_error_after_;
 };
 
 }

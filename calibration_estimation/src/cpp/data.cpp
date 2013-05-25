@@ -40,6 +40,8 @@
 #include "conversion.h"
 #include "projection.h"
 
+#include "auxiliar.h"
+
 using namespace std;
 using namespace cv;
 
@@ -106,17 +108,17 @@ void Data::showView(std::size_t id, const vector<string> &camera_frames)
       if (cam_idx < 0)
         continue;
 
-      // points to base_footprint (new_points)
-      Mat new_points;
-      apply_transform(current_view.board_transformed_pts_3D_[cam_idx],
-                      camera_frames[i],
-                      "base_footprint",
-                      &new_points);
+//       // points to base_footprint (new_points)
+//       Mat new_points;
+//       apply_transform(current_view.board_transformed_pts_3D_[cam_idx],
+//                       camera_frames[i],
+//                       "base_footprint",
+//                       &new_points);
 
       // add new_points to markers_
-      markers_->addMarkers(new_points,
+      markers_->addMarkers(current_view.board_transformed_pts_3D_[cam_idx],
                            current_view.camera_id_[cam_idx],
-                           "base_footprint",
+                           current_view.frame_name_[cam_idx],
                            chooseColor(i));
 
       // show stats
@@ -129,20 +131,19 @@ void Data::showView(std::size_t id, const vector<string> &camera_frames)
       cout << "\ttvec = "               << current_view.tvec_[cam_idx] << endl << endl;
     }
 
+    // more stats
+//     current_view.updateView();
+//     current_view.calc_error();
+//     current_view.output();
+
     // show triangulated 3D points
     if( current_view.triang_pts_3D_.size() > 0 )
     {
-      Mat new_points;
-      apply_transform(Mat(current_view.triang_pts_3D_),
-                      camera_frames[0],
-                      "base_footprint",
-                      &new_points);
-
       // add new_points to markers_
-      markers_->addMarkers(new_points,
-                                "new",
-                                "base_footprint",
-                                cv::Scalar(255,255,255));
+      markers_->addMarkers(Mat(current_view.triang_pts_3D_),
+                           "triangulation",
+                           camera_frames[0],
+                           cv::Scalar(255, 255, 255));
     }
   }
 }

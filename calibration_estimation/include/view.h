@@ -96,6 +96,7 @@ public:
 
   static std::vector<double *>    camera_rot_;       // external
   static std::vector<double *>    camera_trans_;     // external
+  static std::vector<std::string> cameras_;          // external - cameras to be calibrated
 
   std::vector<Points2D> expected_pts_2D_;          // findCbPoses()
   std::vector<double>   error_;                    // findCbPoses()
@@ -110,7 +111,7 @@ public:
   std::vector<std::string>           frame_name_;  // getFrameNames()
   std::map<std::string, std::size_t> frame_id_;    // frame_name -> frame_id
 
-//   std::vector<KDL::Frame> pose_rel_, pose_father_; // getPoses()
+  std::vector<KDL::Frame> pose_rel_, pose_father_; // getPoses()
 //   KDL::Frame T0; // T0 == pose_father_[0]*pose_rel_[0]
 
 
@@ -128,6 +129,11 @@ public:
                      const std::vector<double *>    &camera_trans); //!< translations
 
   void calc_error();
+
+  void save();
+  void output();
+
+  void updateView();
 
 private:
   /// \brief Generate 3D chessboard corners (board_points)
@@ -149,7 +155,7 @@ private:
   void getFrameNames();
 
   /// \brief Get Poses from Message and using robot_state_ for calculating the FK
-//   void getPoses();
+  void getPoses();
 
 private:
   static RobotState *robot_state_; // it is needed in order to calculate cameras

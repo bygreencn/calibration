@@ -81,7 +81,7 @@ public:
   // public members
   std::vector<View> view_;
 
-private:
+// private:
   /// \brief Update robot state with the measured joint angles
   void updateRobot(std::size_t id);
 
